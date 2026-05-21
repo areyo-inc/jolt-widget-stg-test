@@ -109,9 +109,16 @@
 
     <section class="tools">
       <h2>テスト用ツール</h2>
-      <p class="muted">「初回訪問」状態に戻したいときに使います。</p>
-      <button onclick="clearWidgetAuth()">localStorage の widget_token をクリア</button>
-      <button onclick="location.reload()">ページをリロード</button>
+      <p class="muted">
+        ウィジェットの認証チェックは <strong>1セッション(=このタブ)につき1回しか走らない</strong> 仕様です。
+        マジックリンク認証 → テストページに戻った後にウィジェットが認証済みにならない場合、
+        下の「sessionStorageプローブをリセットしてリロード」を押してください。
+      </p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+        <button onclick="resetProbeAndReload()">sessionStorageプローブをリセットしてリロード</button>
+        <button onclick="clearWidgetAuth()">未認証状態に戻す（全クリア）</button>
+        <button onclick="location.reload()">単純リロード</button>
+      </div>
       <p class="muted" style="margin-top: 12px;">
         ※ HttpOnly Cookieは DevTools → Application → Cookies → <code>https://api.stg.jolt.me</code> から手動削除してください。
       </p>
@@ -145,13 +152,25 @@
       if (!id) return;
       try {
         localStorage.removeItem("jolt_widget_token_" + id);
+        localStorage.removeItem("jolt_widget_hint_" + id);
+        sessionStorage.removeItem("jolt_widget_probe_" + id);
       } catch (e) {
         // SecurityError 等
       }
       alert(
-        "localStorage の widget_token をクリアしました。\n" +
-        "Cookie は DevTools → Application → Cookies から手動削除してください。"
+        "localStorage / sessionStorage をクリアしました。\n" +
+        "ページをリロードすると認証チェックが再実行されます。\n" +
+        "Cookieが残っていれば認証済み状態で表示されます。"
       );
+    }
+
+    function resetProbeAndReload() {
+      const id = getProgramIdFromUrl();
+      if (!id) return;
+      try {
+        sessionStorage.removeItem("jolt_widget_probe_" + id);
+      } catch (e) {}
+      location.reload();
     }
 
     // ---------- ウィジェット注入 ----------
