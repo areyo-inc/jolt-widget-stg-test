@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jolt Widget stg 動作確認</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px 80px;
+      line-height: 1.7;
+      color: #1f1f1f;
+      background: #fafafa;
+    }
+    h1 { border-bottom: 2px solid #ddd; padding-bottom: 8px; margin-bottom: 16px; }
+    h2 { margin-top: 0; font-size: 18px; }
+    section {
+      margin: 24px 0;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 10px;
+    }
+    code, kbd {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-size: 0.9em;
+    }
+    button.trigger {
+      background: #1677ff;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 12px 24px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button.trigger:hover { background: #0958d9; }
+    .tools button {
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 6px;
+      margin-right: 8px;
+    }
+    .tools button:hover { background: #f5f5f5; }
+    .inline-host {
+      border: 1px dashed #ccc;
+      min-height: 120px;
+      padding: 12px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .program-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .program-form input {
+      flex: 1;
+      min-width: 280px;
+      padding: 8px 10px;
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .program-form button {
+      background: #1677ff; color: #fff; border: 0; padding: 9px 16px;
+      border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    .muted { color: #666; font-size: 0.92em; }
+    .badge { display: inline-block; background: #eef; color: #335; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Jolt Widget stg 動作確認ページ <span class="badge">staging</span></h1>
+
+  <section id="program-section">
+    <h2>1. プログラムIDを指定</h2>
+    <p class="muted">URLに <code>?program=01XXXXX...</code> を付けるか、下のフォームに入力してください。</p>
+    <div class="program-form">
+      <input id="program-input" type="text" placeholder="vendor_program_id (ULID 26桁)" />
+      <button onclick="applyProgram()">適用</button>
+    </div>
+    <p id="current-program" class="muted" style="margin-top: 12px;"></p>
+  </section>
+
+  <div id="widget-sections" style="display: none;">
+    <section>
+      <h2>① インライン埋め込み</h2>
+      <p class="muted">下の枠内に直接展開されます。</p>
+      <div id="inline-host" class="inline-host"></div>
+    </section>
+
+    <section>
+      <h2>② 要素クリックポップアップ</h2>
+      <p class="muted">ボタンクリックでモーダルとして開きます。</p>
+      <button id="popup-trigger" class="trigger">紹介リンクを取得する</button>
+    </section>
+
+    <section>
+      <h2>③ フローティング</h2>
+      <p class="muted">画面右下に常時表示されているボタンが対象です。クリックで展開。</p>
+    </section>
+
+    <section class="tools">
+      <h2>テスト用ツール</h2>
+      <p class="muted">「初回訪問」状態に戻したいときに使います。</p>
+      <button onclick="clearWidgetAuth()">localStorage の widget_token をクリア</button>
+      <button onclick="location.reload()">ページをリロード</button>
+      <p class="muted" style="margin-top: 12px;">
+        ※ HttpOnly Cookieは DevTools → Application → Cookies → <code>https://api.stg.jolt.me</code> から手動削除してください。
+      </p>
+    </section>
+  </div>
+
+  <script>
+    // ---------- プログラムID解決 ----------
+    function getProgramIdFromUrl() {
+      const params = new URLSearchParams(location.search);
+      return (params.get("program") || "").trim();
+    }
+
+    function setProgramInUrl(programId) {
+      const url = new URL(location.href);
+      url.searchParams.set("program", programId);
+      location.href = url.toString();
+    }
+
+    function applyProgram() {
+      const v = document.getElementById("program-input").value.trim();
+      if (!v) {
+        alert("vendor_program_id を入力してください");
+        return;
+      }
+      setProgramInUrl(v);
+    }
+
+    function clearWidgetAuth() {
+      const id = getProgramIdFromUrl();
+      if (!id) return;
+      try {
+        localStorage.removeItem("jolt_widget_token_" + id);
+      } catch (e) {
+        // SecurityError 等
+      }
+      alert(
+        "localStorage の widget_token をクリアしました。\n" +
+        "Cookie は DevTools → Application → Cookies から手動削除してください。"
+      );
+    }
+
+    // ---------- ウィジェット注入 ----------
+    function injectWidget(programId) {
+      // インライン領域の data 属性を設定
+      const inlineHost = document.getElementById("inline-host");
+      inlineHost.setAttribute("data-jolt-widget-inline", programId);
+
+      // ポップアップトリガーの data 属性を設定
+      const popupTrigger = document.getElementById("popup-trigger");
+      popupTrigger.setAttribute("data-jolt-widget-trigger", programId);
+
+      // 3モード分の script タグを動的注入
+      const modes = ["inline", "popup", "floating"];
+      modes.forEach(function (mode) {
+        const s = document.createElement("script");
+        s.async = true;
+        s.src = "https://tag.stg.jolt.me/widget/v1/widget.js";
+        s.setAttribute("data-jolt-vendor-program-id", programId);
+        s.setAttribute("data-jolt-mode", mode);
+        document.body.appendChild(s);
+      });
+    }
+
+    // ---------- 起動 ----------
+    (function init() {
+      const id = getProgramIdFromUrl();
+      const currentEl = document.getElementById("current-program");
+      const inputEl = document.getElementById("program-input");
+      const sectionsEl = document.getElementById("widget-sections");
+
+      if (id) {
+        currentEl.innerHTML = "現在の対象プログラム: <code>" + id + "</code>";
+        inputEl.value = id;
+        sectionsEl.style.display = "block";
+        injectWidget(id);
+      } else {
+        currentEl.textContent = "未指定。上の入力欄に vendor_program_id を入れて「適用」を押してください。";
+      }
+    })();
+  </script>
+</body>
+</html>
