@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>送信完了 | Jolt stg リードフォーム（テスト）</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      max-width: 640px;
+      margin: 40px auto;
+      padding: 0 16px 80px;
+      line-height: 1.7;
+      color: #1f1f1f;
+      background: #fafafa;
+    }
+    h1 { border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+    .badge { display: inline-block; background: #eef; color: #335; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 6px; vertical-align: middle; }
+    section {
+      margin: 24px 0;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 10px;
+    }
+    .status {
+      padding: 16px;
+      border-radius: 6px;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .status.loading { background: #f0f6ff; border: 1px solid #91caff; }
+    .status.success { background: #e6ffed; border: 1px solid #7cdc9e; }
+    .status.error { background: #fee; border: 1px solid #e88; color: #b00; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 12px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>送信完了 <span class="badge">stg test</span></h1>
+
+  <section>
+    <h2>お問い合わせありがとうございました</h2>
+    <p>このページがロードされた時点で <code>POST /api/tracking/cv</code> を実行し、 referrals テーブルにリードを作成します。</p>
+    <div class="status loading" id="cv-status">送信中…</div>
+  </section>
+
+  <section style="font-size: 12px; color: #666;">
+    <p><strong>送信ペイロード（デバッグ）:</strong></p>
+    <pre id="payload-debug">(none)</pre>
+  </section>
+
+  <script>
+    const API_BASE = "https://external-api.stg.jolt.me";
+
+    const statusEl = document.getElementById("cv-status");
+    const debugEl = document.getElementById("payload-debug");
+
+    function showStatus(kind, msg) {
+      statusEl.className = "status " + kind;
+      statusEl.innerHTML = msg;
+    }
+
+    async function fireConversion() {
+      const raw = sessionStorage.getItem("jolt_lead_form_payload");
+      if (!raw) {
+        showStatus("error",
+          "⚠️ 直前のフォーム送信データが見つかりません。リードフォームから順に開いてください。");
+        return;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        showStatus("error", "⚠️ ペイロードの解析に失敗しました。");
+        return;
+      }
+
+      // 完了ページ用にメタデータを上書き
+      payload.page_url = location.href;
+      payload.page_title = document.title;
+      debugEl.textContent = JSON.stringify(payload, null, 2);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/tracking/cv`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          credentials: "include"
+        });
+        const body = await res.json();
+        if (!res.ok || !body.success) {
+          showStatus("error",
+            "❌ /cv エラー: " + (body.message || `HTTP ${res.status}`));
+          return;
+        }
+        showStatus("success",
+          "✅ リード作成リクエスト成功。ベンダーダッシュボードの「紹介」画面で確認してください。");
+        // 二重投稿防止
+        sessionStorage.removeItem("jolt_lead_form_payload");
+      } catch (err) {
+        showStatus("error", "❌ ネットワークエラー: " + err.message);
+      }
+    }
+
+    fireConversion();
+  </script>
+</body>
+</html>

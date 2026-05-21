@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jolt stg リードフォーム（テスト）</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      max-width: 640px;
+      margin: 40px auto;
+      padding: 0 16px 80px;
+      line-height: 1.7;
+      color: #1f1f1f;
+      background: #fafafa;
+    }
+    h1 { border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+    .badge { display: inline-block; background: #eef; color: #335; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 6px; vertical-align: middle; }
+    section {
+      margin: 24px 0;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 10px;
+    }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 13px; }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      background: #1677ff;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 12px 24px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .info {
+      background: #fffae0;
+      border: 1px solid #f3d96f;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+    .error {
+      background: #fee;
+      border: 1px solid #e88;
+      color: #b00;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <h1>リードフォーム <span class="badge">stg test</span></h1>
+
+  <div class="info" id="cookie-status">読み込み中...</div>
+
+  <section>
+    <h2>お問い合わせ</h2>
+    <form id="lead-form">
+      <label>姓 <input type="text" name="last-name" value="山田" required></label>
+      <label>名 <input type="text" name="first-name" value="太郎" required></label>
+      <label>メールアドレス <input type="email" name="email" value="testlead1@example.com" required></label>
+      <label>会社名 <input type="text" name="company-name" value="テスト株式会社" required></label>
+      <label>お問い合わせ内容 <textarea name="message">stg環境動作確認用のテストリードです。</textarea></label>
+      <button type="submit" id="submit-btn">送信</button>
+      <div class="error" id="error-msg"></div>
+    </form>
+  </section>
+
+  <section style="font-size: 12px; color: #666;">
+    <p><strong>このページの動作：</strong></p>
+    <ol>
+      <li>紹介リンクから遷移してくるとき、URL fragment に <code>cookie_value</code> が乗っている → localStorage に保存</li>
+      <li>フォーム送信 → <code>POST /api/tracking/submit</code> で tracking_event 記録</li>
+      <li>成功後、完了ページ <code>./thanks.html</code> に遷移</li>
+      <li>完了ページで <code>POST /api/tracking/cv</code> → referrals テーブルにリード作成</li>
+    </ol>
+  </section>
+
+  <script>
+    const API_BASE = "https://external-api.stg.jolt.me";
+    const COOKIE_STORAGE_KEY = "jolt_referral_cookie_value";
+
+    // ---------- fragment から cookie_value を取り出して localStorage に保存 ----------
+    function consumeCookieFromFragment() {
+      const hash = location.hash;
+      if (!hash || hash.length <= 1) return;
+      try {
+        // 紹介リンク click 後のリダイレクトは fragment に JSON を乗せて飛ばしてくる
+        const decoded = decodeURIComponent(hash.slice(1));
+        const json = JSON.parse(decoded);
+        if (json.cookie_value) {
+          localStorage.setItem(COOKIE_STORAGE_KEY, json.cookie_value);
+          // URL からは消す（リロード時に2回読み込まないように）
+          history.replaceState(null, "", location.pathname + location.search);
+          return json.cookie_value;
+        }
+      } catch (e) {
+        // fragment が JSON でない場合は無視
+      }
+      return null;
+    }
+
+    function getCookieValue() {
+      // 1. fragment から最新のものを取得
+      const fromFragment = consumeCookieFromFragment();
+      if (fromFragment) return fromFragment;
+      // 2. localStorage から取得（前回保存分）
+      return localStorage.getItem(COOKIE_STORAGE_KEY);
+    }
+
+    // ---------- 起動 ----------
+    const cookieValue = getCookieValue();
+    const statusEl = document.getElementById("cookie-status");
+    const submitBtn = document.getElementById("submit-btn");
+    if (cookieValue) {
+      statusEl.innerHTML = "✅ 紹介リンク経由のアクセスを認識しました（リファラー情報あり）";
+      statusEl.style.background = "#e6ffed";
+      statusEl.style.borderColor = "#7cdc9e";
+    } else {
+      statusEl.innerHTML = "⚠️ <strong>紹介リンク経由のアクセスではありません。</strong>" +
+        " 紹介リンクをクリックしてこのページに来てください。フォーム送信してもリードは作られません。";
+      submitBtn.disabled = true;
+    }
+
+    // ---------- フォーム送信 ----------
+    document.getElementById("lead-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("error-msg");
+      errorEl.style.display = "none";
+      submitBtn.disabled = true;
+
+      const formData = {};
+      new FormData(e.target).forEach((v, k) => { formData[k] = v; });
+
+      const payload = {
+        page_url: location.href,
+        page_title: document.title,
+        referrer: document.referrer,
+        form_data: formData,
+        form_id: "lead-form",
+        form_method: "POST",
+        submitted_at: new Date().toISOString(),
+        http_method: "POST",
+        cookie_value: cookieValue
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/tracking/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          credentials: "include"
+        });
+        const body = await res.json();
+        if (!res.ok || !body.success) {
+          errorEl.textContent = "送信エラー: " + (body.message || `HTTP ${res.status}`);
+          errorEl.style.display = "block";
+          submitBtn.disabled = false;
+          return;
+        }
+        // submit 成功 → 完了ページに form データを引き継いで遷移
+        sessionStorage.setItem("jolt_lead_form_payload", JSON.stringify(payload));
+        location.href = "./thanks.html";
+      } catch (err) {
+        errorEl.textContent = "ネットワークエラー: " + err.message;
+        errorEl.style.display = "block";
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
