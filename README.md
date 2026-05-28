@@ -2,18 +2,178 @@
 
 Jolt リファラー機能の stg 環境動作確認用テストページ。
 
+公開URL: https://areyo-inc.github.io/jolt-widget-stg-test/
+
+---
+
+## できること
+
+| 機能 | 内容 |
+| --- | --- |
+| プログラム切替 | 4プログラム（BtoB Pのみ / P+R / Rのみ / BtoC Rのみ）のプリセットを保存しワンクリックで切替 |
+| ウィジェット | フローティング・ポップアップ・インラインの3形式を同一ページに展開。フル表示形式は専用ページ |
+| リードフォーム | 紹介リンク経由のリード作成テスト（`lead-form/`）。URL fragment の cookie_value 経由で帰属し、`/api/tracking/submit` → `/api/tracking/cv` を発火 |
+| タグ: updateLeadStatus | BtoBリード自動作成タグ（既存）の送信フォーム。qualified / won |
+| タグ: track | Phase 2 カスタムイベント (signup / purchase / renewal) の送信フォーム |
+| 状態観察 | localStorage / sessionStorage / document.cookie / タグ版本 の確認 |
+| テストツール | sessionStorage プローブのリセット / localStorage 全クリア |
+
+---
+
+## ファイル構成
+
+```
+.
+├── index.html         メインページ（プログラム選択・ウィジェット3形式・タグ送信・状態観察）
+├── full.html          フル表示形式（Phase 2）専用ページ
+├── lead-form/
+│   ├── index.html     紹介リンク経由のリード作成テスト用フォーム
+│   └── thanks.html    フォーム送信後のCV発火ページ
+└── README.md
+```
+
+外部依存:
+- ウィジェット: `https://tag.stg.jolt.me/widget/v1/widget.js`
+- タグ: `https://tag.stg.jolt.me/v1/tag.js`
+- API: `https://external-api.stg.jolt.me`
+
+---
+
 ## 使い方
 
-公開URL末尾に `?program={vendor_program_id}` を付けてアクセスする：
+### 初回セットアップ（プリセット登録）
+
+1. https://areyo-inc.github.io/jolt-widget-stg-test/ を開く
+2. 「0. プログラム設定」セクションの **プリセットを編集（初回のみ）** を展開
+3. 4プログラム分の `vendor_program_id` と `public_token` を入力
+   - `vendor_program_id` はベンダーダッシュボードURLの `/programs/XXX` の末尾
+   - `public_token` はベンダーダッシュボード → プログラム設定 → 連携設定 から取得
+4. 「プリセットを保存」をクリック
+   - localStorage に保存される（このブラウザのみ）
+
+### 日常の切替
+
+ヘッダー下の **プリセット切替** ボタンをクリックするだけ。
+
+### URL での直接指定
 
 ```
-https://areyo-inc.github.io/jolt-widget-stg-test/?program=01XXXXX...
+https://areyo-inc.github.io/jolt-widget-stg-test/?program=01XXX...&pubToken=pub_xxx
+https://areyo-inc.github.io/jolt-widget-stg-test/?preset=0   # 0..3 でプリセットを切替
 ```
 
-3つの設置方式（インライン / 要素クリックポップアップ / フローティング）が同一ページに展開されるので、それぞれの挙動を確認できる。
+`preset` 指定が最優先、次に `program` + `pubToken`。
+
+---
+
+## 動作確認の流れ（一例）
+
+```
+1. プリセットを切替（Section 0）
+2. ウィジェットでメアド入力 → 紹介リンク取得（Section 1）
+3. 受信したマジックリンクメールでメール認証 → このページに戻る
+4. テストツールの「sessionStorage プローブをリセットしてリロード」を押す（Section 6）
+5. ウィジェットが認証済み状態で表示されることを確認（実績タブが詳細表示に）
+6. 別ブラウザ（シークレット）で紹介リンクをクリック → 帰属Cookieセット
+7. 別ブラウザ側でリードを作成（以下のいずれか）:
+   - Section 2 の「リードフォームを開く」→ 問い合わせフォームを送信（既存BtoBパイプライン）
+   - Section 3 の updateLeadStatus タグを送信（BtoB既存タグ）
+   - Section 4 の track signup / purchase を送信（Phase 2）
+8. ベンダーダッシュボードの「紹介」一覧で referrer_id がセットされたリードが出ていることを確認
+9. リード → 適格 → 取引成立 を進めて報酬発火を確認
+10. リファラーをブロックして、紹介リンクから新規リードが作れなくなることを確認
+```
+
+### リードフォーム経由の動作（lead-form/）
+
+紹介リンクをクリック → リダイレクトで lead-form/index.html に遷移 → URL fragment の `cookie_value` を localStorage に保存 → フォーム送信 (`POST /api/tracking/submit`) → thanks.html へ → `POST /api/tracking/cv` でリード作成。
+
+紹介リンクの設定でリダイレクト先を `https://areyo-inc.github.io/jolt-widget-stg-test/lead-form/` に向けると、このページが「ベンダーサイトの問い合わせフォーム」を模した遷移先として動作します。
+
+---
+
+## タグの送信仕様（参考）
+
+### updateLeadStatus（BtoB既存）
+
+```js
+Jolt('init', 'pub_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+Jolt('updateLeadStatus', {
+  status: 'qualified' | 'won',        // 必須
+  email: 'lead@example.com',          // organization_id 未指定時必須
+  organization_id: 'org_xxx',         // email 未指定時必須・推奨
+  company_name: '株式会社サンプル',
+  last_name: '山田',
+  first_name: '太郎'
+});
+```
+
+エンドポイント: `POST https://external-api.stg.jolt.me/api/tracking/lead-status`
+
+### track signup / purchase（Phase 2）
+
+```js
+Jolt('track', 'signup', {
+  vendor_program_id: '01XXX...',
+  customer_contact_email: 'customer@example.com',
+  customer_name: '山田 太郎',         // optional
+  external_source: 'app_signup',     // optional
+  external_source_id: 'user_12345'   // optional
+});
+
+Jolt('track', 'purchase', {
+  vendor_program_id: '01XXX...',
+  customer_contact_email: 'customer@example.com',
+  amount: 5000,                       // 円。%報酬時必須
+  external_source: 'stripe',
+  external_source_id: 'pi_xxxxxxx'
+});
+```
+
+エンドポイント: `POST https://external-api.stg.jolt.me/v1/tag/events/{signup|purchase}`
+
+帰属は `jolt_referral` Cookie 経由。Cookie がない場合は帰属不能として処理終了（タグはサイレント）。
+
+### track renewal（Phase 2 / 通常はサーバーサイド呼び出し）
+
+```js
+Jolt('track', 'renewal', {
+  vendor_program_id: '01XXX...',
+  customer_contact_email: 'customer@example.com',
+  amount: 500,
+  external_source: 'stripe',          // 必須
+  external_source_id: 'inv_xxxxxxx'   // 必須（冪等性キー）
+});
+```
+
+---
+
+## トラブルシュート
+
+### ウィジェットが表示されない
+
+- クリエイティブの **公開ステータス**を「公開中」に変更（デフォルトは「停止」）
+- ブラウザの DevTools コンソール / Network タブを確認
+- CSP で `tag.stg.jolt.me` がブロックされていないか確認（このページでは緩いので発生しないはず）
+
+### マジックリンク認証後にウィジェットが未認証のまま
+
+ウィジェットの認証チェックは 1セッションにつき 1 回しか走らない仕様。
+**「sessionStorage プローブをリセットしてリロード」**（Section 5）を実行してください。
+
+### タグの送信結果が見えない
+
+タグはレスポンスを返さない fire-and-forget 設計。
+DevTools → Network タブで `lead-status` / `tag/events/...` のリクエスト/レスポンスを確認してください。
+
+### Phase 2 のタグが 404 を返す
+
+`jolt-backend` の Phase 2 機能（`/v1/tag/events/...` エンドポイント）が未実装の場合に発生します。バックエンドの実装状況を確認してください。
+
+---
 
 ## 注意
 
-- このリポジトリは stg 動作確認のためだけの一時的なものです。動作確認終了後は archive 推奨。
-- 中身は静的 HTML 1 ファイルのみ。
-- ウィジェットスクリプトは `https://tag.stg.jolt.me/widget/v1/widget.js` を参照。
+- このリポジトリは stg 動作確認のためだけのツールです
+- 本番環境の vendor_program_id / public_token を投入しないでください（プリセットは localStorage に平文保存されます）
+- 動作確認終了後は archive 推奨

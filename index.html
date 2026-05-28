@@ -3,213 +3,1009 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jolt Widget stg 動作確認</title>
+  <title>Jolt stg 動作確認ツール</title>
   <style>
-    :root { color-scheme: light; }
+    :root {
+      color-scheme: light;
+      --border: #e3e3e3;
+      --bg: #fafafa;
+      --card: #fff;
+      --text: #1f1f1f;
+      --muted: #6b6b6b;
+      --primary: #ff6b35;
+      --primary-hover: #e85a28;
+      --success: #2f7d32;
+      --warning: #b26a00;
+      --danger: #c0392b;
+      --code-bg: #f3f3f3;
+    }
+    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      max-width: 760px;
-      margin: 40px auto;
-      padding: 0 16px 80px;
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 0 16px 120px;
       line-height: 1.7;
-      color: #1f1f1f;
-      background: #fafafa;
+      color: var(--text);
+      background: var(--bg);
     }
-    h1 { border-bottom: 2px solid #ddd; padding-bottom: 8px; margin-bottom: 16px; }
-    h2 { margin-top: 0; font-size: 18px; }
+    header { margin-bottom: 24px; }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+    }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    h3 { margin: 16px 0 8px; font-size: 15px; color: var(--muted); }
     section {
-      margin: 24px 0;
-      padding: 24px;
-      background: #fff;
-      border: 1px solid #eee;
+      margin: 20px 0;
+      padding: 20px 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 10px;
     }
+    section.muted-section { background: #f6f6f6; }
     code, kbd {
-      background: #f0f0f0;
+      background: var(--code-bg);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: SFMono-Regular, Consolas, monospace;
-      font-size: 0.9em;
+      font-size: 0.88em;
+    }
+    pre {
+      background: var(--code-bg);
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .muted { color: var(--muted); font-size: 0.9em; }
+    .badge {
+      display: inline-block;
+      background: #fff3e6;
+      color: var(--primary);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.78em;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+    .badge.phase2 { background: #eef; color: #335; }
+    .badge.warn { background: #fff5e0; color: var(--warning); }
+    button {
+      cursor: pointer;
+      font-family: inherit;
     }
     button.trigger {
-      background: #1677ff;
+      background: var(--primary);
       color: #fff;
       border: 0;
       border-radius: 6px;
       padding: 12px 24px;
       font-size: 15px;
-      cursor: pointer;
     }
-    button.trigger:hover { background: #0958d9; }
-    .tools button {
-      padding: 8px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-      background: #fff;
+    button.trigger:hover { background: var(--primary-hover); }
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      padding: 9px 16px;
       border-radius: 6px;
-      margin-right: 8px;
+      font-size: 14px;
     }
-    .tools button:hover { background: #f5f5f5; }
+    button.primary:hover { background: var(--primary-hover); }
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid #ccc;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    button.secondary:hover { background: #f5f5f5; }
+    button.danger {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #e0b4b0;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    button.danger:hover { background: #fff5f4; }
     .inline-host {
       border: 1px dashed #ccc;
       min-height: 120px;
       padding: 12px;
       border-radius: 6px;
-      background: #fafafa;
+      background: var(--bg);
     }
-    .program-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .program-form input {
-      flex: 1;
-      min-width: 280px;
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row-stack { display: flex; flex-direction: column; gap: 8px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    input[type="text"], input[type="email"], input[type="number"], select, textarea {
+      width: 100%;
       padding: 8px 10px;
-      font-family: SFMono-Regular, Consolas, monospace;
+      font-family: inherit;
       font-size: 14px;
       border: 1px solid #ccc;
       border-radius: 6px;
+      background: #fff;
     }
-    .program-form button {
-      background: #1677ff; color: #fff; border: 0; padding: 9px 16px;
-      border-radius: 6px; font-size: 14px; cursor: pointer;
+    input[readonly] { background: #f6f6f6; color: var(--muted); }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      margin-bottom: 12px;
     }
-    .muted { color: #666; font-size: 0.92em; }
-    .badge { display: inline-block; background: #eef; color: #335; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 6px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    th { background: #f6f6f6; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .tabs button {
+      background: none;
+      border: 0;
+      padding: 8px 16px;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tabs button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .result-success { color: var(--success); }
+    .result-error { color: var(--danger); }
+    .result-warn { color: var(--warning); }
+    details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+    .preset-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-buttons button {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .preset-buttons button.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .alert {
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .alert.warn { background: #fff5e0; color: var(--warning); border: 1px solid #f0d9a4; }
+    .alert.info { background: #eaf3ff; color: #1a4d8c; border: 1px solid #c5dbf2; }
   </style>
 </head>
 <body>
-  <h1>Jolt Widget stg 動作確認ページ <span class="badge">staging</span></h1>
+  <header>
+    <h1>Jolt stg 動作確認ツール <span class="badge">staging</span></h1>
+    <p class="muted">リファラー機能（ウィジェット）と各種タグ（リード自動作成・カスタムイベント）の動作確認用ページ。</p>
+  </header>
 
+  <!-- ============================= -->
+  <!-- 0. プログラム設定               -->
+  <!-- ============================= -->
   <section id="program-section">
-    <h2>1. プログラムIDを指定</h2>
-    <p class="muted">URLに <code>?program=01XXXXX...</code> を付けるか、下のフォームに入力してください。</p>
-    <div class="program-form">
-      <input id="program-input" type="text" placeholder="vendor_program_id (ULID 26桁)" />
-      <button onclick="applyProgram()">適用</button>
+    <h2>0. プログラム設定</h2>
+
+    <p class="muted">4プログラム分のプリセットを保存しておくとワンクリックで切替できます。プリセットは <code>localStorage</code> にこのブラウザだけに保存されます。</p>
+
+    <details id="preset-editor">
+      <summary>プリセットを編集（初回のみ）</summary>
+      <table id="preset-table" style="margin-top: 12px;">
+        <thead>
+          <tr>
+            <th style="width: 24%;">ラベル</th>
+            <th style="width: 32%;">vendor_program_id</th>
+            <th style="width: 32%;">public_token (pub_xxx)</th>
+            <th style="width: 12%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="preset-tbody"></tbody>
+      </table>
+      <div class="row" style="margin-top: 12px;">
+        <button class="primary" onclick="savePresets()">プリセットを保存</button>
+        <button class="secondary" onclick="resetPresets()">デフォルトに戻す</button>
+      </div>
+      <p class="muted" style="margin-top: 8px;">
+        public_token はベンダーダッシュボードの「プログラム設定 > 連携設定 > 公開トークン」から取得できます。タグ呼び出し（updateLeadStatus）で必須です。
+      </p>
+    </details>
+
+    <h3 style="margin-top: 16px;">プリセット切替</h3>
+    <div id="preset-quick-switch" class="preset-buttons"></div>
+
+    <h3>または URL で直接指定</h3>
+    <div class="form-grid">
+      <div>
+        <label>vendor_program_id</label>
+        <input id="program-input" type="text" placeholder="01XXXXX... (26桁ULID)" />
+      </div>
+      <div>
+        <label>public_token (オプション・タグ送信に必要)</label>
+        <input id="pubtoken-input" type="text" placeholder="pub_xxxxxxxx..." />
+      </div>
     </div>
-    <p id="current-program" class="muted" style="margin-top: 12px;"></p>
+    <div class="row">
+      <button class="primary" onclick="applyManual()">この値を適用</button>
+      <button class="secondary" onclick="clearProgram()">クリア</button>
+    </div>
+
+    <div id="current-status" class="alert info" style="margin-top: 16px;">
+      <!-- JSで描画 -->
+    </div>
   </section>
 
-  <div id="widget-sections" style="display: none;">
+  <!-- ============================= -->
+  <!-- 1. ウィジェット                  -->
+  <!-- ============================= -->
+  <div id="program-required" style="display: none;">
     <section>
-      <h2>① インライン埋め込み</h2>
-      <p class="muted">下の枠内に直接展開されます。</p>
+      <h2>1. ウィジェット（リファラー登録）</h2>
+      <p class="muted">スクリプト: <code>https://tag.stg.jolt.me/widget/v1/widget.js</code></p>
+      <p class="muted">同一ページに3形式を並べて展開します。フル表示形式は <a id="full-link" href="full.html">専用ページ</a> を開いてください。</p>
+
+      <div class="alert warn">
+        ウィジェットが表示されない場合: クリエイティブの<strong>公開ステータス</strong>が「公開中」になっているか確認してください。デフォルトは「停止」です。
+      </div>
+
+      <h3>① インライン埋め込み</h3>
+      <p class="muted">下の枠内に直接展開されます。<code>data-jolt-widget-inline</code> を持つ要素にマウントされます。</p>
       <div id="inline-host" class="inline-host"></div>
-    </section>
 
-    <section>
-      <h2>② 要素クリックポップアップ</h2>
-      <p class="muted">ボタンクリックでモーダルとして開きます。</p>
+      <h3>② 要素クリックポップアップ</h3>
+      <p class="muted">ボタンクリックでモーダル展開。<code>data-jolt-widget-trigger</code> をトリガー要素に付与します。</p>
       <button id="popup-trigger" class="trigger">紹介リンクを取得する</button>
+
+      <h3>③ フローティング</h3>
+      <p class="muted">画面右下に常時表示されるボタンが対象です（クリエイティブの「表示位置」設定で位置が変わります）。</p>
     </section>
 
+    <!-- ============================= -->
+    <!-- 2. 紹介リンク → 問い合わせフォーム経由のリード作成 -->
+    <!-- ============================= -->
     <section>
-      <h2>③ フローティング</h2>
-      <p class="muted">画面右下に常時表示されているボタンが対象です。クリックで展開。</p>
+      <h2>2. 紹介リンク → 問い合わせフォーム経由のリード作成 <span class="badge">BtoB既存</span></h2>
+      <p class="muted">
+        ベンダーサイトの問い合わせフォームを模した別ページ。<strong>紹介リンクをクリックして遷移してきた状態で送信</strong>すると、tracking_event → conversion → リード作成 までの既存パイプラインが動きます。Section 3 のタグ <code>updateLeadStatus</code> よりこちらの方が紹介ベースのリード作成に近いシナリオです。
+      </p>
+      <p class="muted">フロー: 紹介リンククリック → fragment <code>cookie_value</code> を localStorage に保存 → フォーム送信 (<code>/api/tracking/submit</code>) → thanks ページで <code>/api/tracking/cv</code> 発火 → リード作成</p>
+      <div class="row">
+        <a id="lead-form-link" class="trigger" href="lead-form/" target="_blank" rel="noopener" style="text-decoration: none; display: inline-block;">リードフォームを開く（新規タブ）</a>
+      </div>
+      <p class="muted" style="margin-top: 8px;">
+        ※ 紹介リンクをコピーして末尾を <code>...&amp;redirect=https://areyo-inc.github.io/jolt-widget-stg-test/lead-form/</code> 等にすると、リダイレクト先としてこのフォームに飛ばせます（実際の挙動はリンク設定のリダイレクト先設定に従う）。
+      </p>
     </section>
 
-    <section class="tools">
-      <h2>テスト用ツール</h2>
+    <!-- ============================= -->
+    <!-- 3. タグ: updateLeadStatus      -->
+    <!-- ============================= -->
+    <section>
+      <h2>3. タグ: updateLeadStatus <span class="badge">BtoB</span></h2>
       <p class="muted">
-        ウィジェットの認証チェックは <strong>1セッション(=このタブ)につき1回しか走らない</strong> 仕様です。
-        マジックリンク認証 → テストページに戻った後にウィジェットが認証済みにならない場合、
-        下の「sessionStorageプローブをリセットしてリロード」を押してください。
+        リード自動作成・ステータス更新を発火。<strong>紹介リンクをクリックしてからこのページに戻り、ブラウザに帰属Cookieが入っている状態で送信</strong>すると、リファラー（またはパートナー）経由のリードとして作成されます。
       </p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-        <button onclick="resetProbeAndReload()">sessionStorageプローブをリセットしてリロード</button>
-        <button onclick="clearWidgetAuth()">未認証状態に戻す（全クリア）</button>
-        <button onclick="location.reload()">単純リロード</button>
+      <p class="muted">エンドポイント: <code>POST {api-base}/api/tracking/lead-status</code>（タグから直接呼ばれます）</p>
+
+      <div id="lead-disabled" class="alert warn" style="display: none;">
+        public_token が未設定のためタグ送信できません。Section 0 でプリセットに public_token を保存してください。
+      </div>
+
+      <form id="form-lead" onsubmit="sendUpdateLeadStatus(event)">
+        <div class="form-grid">
+          <div>
+            <label>status *</label>
+            <select id="lead-status">
+              <option value="qualified">qualified（適格 / サインアップ完了）</option>
+              <option value="won">won（取引成立 / 有料化）</option>
+            </select>
+          </div>
+          <div>
+            <label>email <span class="muted">(org_id 未指定時必須)</span></label>
+            <input id="lead-email" type="email" placeholder="lead@example.com" />
+          </div>
+          <div>
+            <label>organization_id <span class="muted">(email 未指定時必須・推奨)</span></label>
+            <input id="lead-org" type="text" placeholder="org_xxx" />
+          </div>
+          <div>
+            <label>company_name</label>
+            <input id="lead-company" type="text" placeholder="株式会社サンプル" />
+          </div>
+          <div>
+            <label>last_name</label>
+            <input id="lead-lastname" type="text" placeholder="山田" />
+          </div>
+          <div>
+            <label>first_name</label>
+            <input id="lead-firstname" type="text" placeholder="太郎" />
+          </div>
+        </div>
+        <div class="row">
+          <button type="submit" class="primary">updateLeadStatus を送信</button>
+          <button type="button" class="secondary" onclick="fillLeadDummy()">テスト用ダミー値で埋める</button>
+        </div>
+      </form>
+      <div id="lead-result" class="muted" style="margin-top: 12px;"></div>
+    </section>
+
+    <!-- ============================= -->
+    <!-- 4. タグ: track (カスタムイベント) -->
+    <!-- ============================= -->
+    <section>
+      <h2>4. タグ: track <span class="badge phase2">Phase 2</span></h2>
+      <p class="muted">
+        BtoCモード用カスタムイベントタグ。<strong>サーバー側（jolt-backend）の Phase 2 機能が未実装の場合は 404 等のエラーが返ります</strong>（タグはエラーを握り潰すためコンソールに出ません）。
+      </p>
+      <p class="muted">エンドポイント: <code>POST {api-base}/v1/tag/events/{signup|purchase|renewal}</code></p>
+
+      <div class="tabs" id="track-tabs">
+        <button class="active" data-tab="signup">signup</button>
+        <button data-tab="purchase">purchase</button>
+        <button data-tab="renewal">renewal</button>
+      </div>
+
+      <!-- signup -->
+      <div class="tab-panel active" data-panel="signup">
+        <p class="muted">サインアップ・登録完了ページに発火。リードを「適格」へ遷移させる。</p>
+        <form onsubmit="sendTrack(event, 'signup')">
+          <div class="form-grid">
+            <div>
+              <label>vendor_program_id *</label>
+              <input id="signup-program" type="text" readonly />
+            </div>
+            <div>
+              <label>customer_contact_email *</label>
+              <input id="signup-email" type="email" placeholder="customer@example.com" required />
+            </div>
+            <div>
+              <label>customer_name</label>
+              <input id="signup-name" type="text" placeholder="山田 太郎" />
+            </div>
+            <div>
+              <label>customer_contact_last_name</label>
+              <input id="signup-lastname" type="text" placeholder="山田" />
+            </div>
+            <div>
+              <label>customer_contact_first_name</label>
+              <input id="signup-firstname" type="text" placeholder="太郎" />
+            </div>
+            <div>
+              <label>external_source</label>
+              <input id="signup-source" type="text" placeholder="app_signup" />
+            </div>
+            <div class="full">
+              <label>external_source_id</label>
+              <input id="signup-sourceid" type="text" placeholder="user_12345" />
+            </div>
+          </div>
+          <div class="row">
+            <button type="submit" class="primary">track signup を送信</button>
+            <button type="button" class="secondary" onclick="fillTrackDummy('signup')">テスト用ダミー値で埋める</button>
+          </div>
+        </form>
+        <div id="signup-result" class="muted" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- purchase -->
+      <div class="tab-panel" data-panel="purchase">
+        <p class="muted">購入・コンバージョン完了ページに発火。リードを「取引成立」へ遷移させ、イベント2報酬を発火する。</p>
+        <form onsubmit="sendTrack(event, 'purchase')">
+          <div class="form-grid">
+            <div>
+              <label>vendor_program_id *</label>
+              <input id="purchase-program" type="text" readonly />
+            </div>
+            <div>
+              <label>customer_contact_email *</label>
+              <input id="purchase-email" type="email" placeholder="customer@example.com" required />
+            </div>
+            <div>
+              <label>amount <span class="muted">(円・%報酬時必須)</span></label>
+              <input id="purchase-amount" type="number" placeholder="5000" />
+            </div>
+            <div>
+              <label>external_source</label>
+              <input id="purchase-source" type="text" placeholder="stripe" />
+            </div>
+            <div class="full">
+              <label>external_source_id</label>
+              <input id="purchase-sourceid" type="text" placeholder="pi_xxxxxxx" />
+            </div>
+          </div>
+          <div class="row">
+            <button type="submit" class="primary">track purchase を送信</button>
+            <button type="button" class="secondary" onclick="fillTrackDummy('purchase')">テスト用ダミー値で埋める</button>
+          </div>
+        </form>
+        <div id="purchase-result" class="muted" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- renewal -->
+      <div class="tab-panel" data-panel="renewal">
+        <p class="muted">継続課金イベント。<strong>通常はサーバーサイドから呼び出すもの</strong>ですがテスト目的でブラウザから送れるようにしています。external_source / external_source_id が必須です（冪等性キー）。</p>
+        <form onsubmit="sendTrack(event, 'renewal')">
+          <div class="form-grid">
+            <div>
+              <label>vendor_program_id *</label>
+              <input id="renewal-program" type="text" readonly />
+            </div>
+            <div>
+              <label>customer_contact_email *</label>
+              <input id="renewal-email" type="email" placeholder="customer@example.com" required />
+            </div>
+            <div>
+              <label>amount</label>
+              <input id="renewal-amount" type="number" placeholder="500" />
+            </div>
+            <div>
+              <label>external_source *</label>
+              <input id="renewal-source" type="text" placeholder="stripe" required />
+            </div>
+            <div class="full">
+              <label>external_source_id *</label>
+              <input id="renewal-sourceid" type="text" placeholder="inv_xxxxxxx" required />
+            </div>
+          </div>
+          <div class="row">
+            <button type="submit" class="primary">track renewal を送信</button>
+            <button type="button" class="secondary" onclick="fillTrackDummy('renewal')">テスト用ダミー値で埋める</button>
+          </div>
+        </form>
+        <div id="renewal-result" class="muted" style="margin-top: 12px;"></div>
+      </div>
+    </section>
+
+    <!-- ============================= -->
+    <!-- 5. 状態観察                    -->
+    <!-- ============================= -->
+    <section>
+      <h2>5. 帰属 / 認証状態の観察</h2>
+      <p class="muted">localStorage / sessionStorage の値を表示します。HttpOnly Cookie（<code>jolt_widget_token</code> / <code>jolt_referral</code> 等）は JS から読めないので、ブラウザの DevTools → Application → Cookies で確認してください。</p>
+      <table id="state-table">
+        <thead>
+          <tr><th style="width: 40%;">Key</th><th>Value</th></tr>
+        </thead>
+        <tbody id="state-tbody"></tbody>
+      </table>
+      <div class="row" style="margin-top: 12px;">
+        <button class="secondary" onclick="renderState()">再読み込み</button>
+      </div>
+    </section>
+
+    <!-- ============================= -->
+    <!-- 6. テストツール                 -->
+    <!-- ============================= -->
+    <section class="muted-section">
+      <h2>6. テストツール</h2>
+      <p class="muted">
+        ウィジェットの認証チェックは <strong>1セッション (=このタブ) につき1回</strong> しか走らない仕様です。
+        マジックリンク認証後にこのページへ戻ってもウィジェットが未認証のままのときは、<strong>プローブをリセットしてリロード</strong> を試してください。
+      </p>
+      <div class="row">
+        <button class="secondary" onclick="resetProbeAndReload()">sessionStorage プローブをリセットしてリロード</button>
+        <button class="danger" onclick="clearWidgetAuth()">localStorage 全クリア（未認証に戻す）</button>
+        <button class="secondary" onclick="location.reload()">単純リロード</button>
       </div>
       <p class="muted" style="margin-top: 12px;">
-        ※ HttpOnly Cookieは DevTools → Application → Cookies → <code>https://api.stg.jolt.me</code> から手動削除してください。
+        ※ HttpOnly Cookie（<code>jolt_widget_token</code> / <code>jolt_referral</code>）は DevTools → Application → Cookies → <code>api.stg.jolt.me</code> / <code>external-api.stg.jolt.me</code> から手動削除してください。
       </p>
+    </section>
+
+    <!-- ============================= -->
+    <!-- 7. 動作確認の流れ               -->
+    <!-- ============================= -->
+    <section>
+      <h2>7. 動作確認の流れ（一例）</h2>
+      <ol>
+        <li>Section 0 で対象プログラムを切替</li>
+        <li>Section 1 のウィジェットでリファラー登録（メアドを入力 → 紹介リンク表示）</li>
+        <li>受信した <strong>マジックリンクメール</strong> 内のリンクをクリック → 認証完了 → このページに戻る</li>
+        <li>戻ってきたら「sessionStorage プローブをリセットしてリロード」（Section 6）</li>
+        <li>ウィジェットが <strong>認証済み状態</strong> で表示されることを確認（実績タブが詳細表示に）</li>
+        <li>別ブラウザ（シークレット） or 別端末で紹介リンクをクリック → 帰属 Cookie をセット</li>
+        <li>
+          別ブラウザ側でリードを作成（以下のいずれか）
+          <ul>
+            <li>Section 2 の <strong>リードフォーム</strong> を開いて送信（既存BtoBパイプライン）</li>
+            <li>Section 3 の <code>updateLeadStatus</code> タグ送信（BtoB既存タグ）</li>
+            <li>Section 4 の <code>track signup / purchase</code>（Phase 2）</li>
+          </ul>
+        </li>
+        <li>ベンダーダッシュボードの「紹介」一覧で <strong>referrer_id がセットされたリード</strong> が出ていることを確認</li>
+        <li>リード → 適格 → 取引成立 と進めて報酬が発火することを確認</li>
+        <li>リファラーをブロックして、紹介リンクから新規リードが作れなくなることを確認</li>
+      </ol>
     </section>
   </div>
 
   <script>
-    // ---------- プログラムID解決 ----------
-    function getProgramIdFromUrl() {
-      const params = new URLSearchParams(location.search);
-      return (params.get("program") || "").trim();
+    // ============================================================
+    // 定数
+    // ============================================================
+    const STG_API_BASE = "https://external-api.stg.jolt.me";
+    const STG_WIDGET_SRC = "https://tag.stg.jolt.me/widget/v1/widget.js";
+    const STG_TAG_SRC = "https://tag.stg.jolt.me/v1/tag.js";
+
+    const DEFAULT_PRESETS = [
+      { label: "BtoB Pのみ", vendorProgramId: "", pubToken: "" },
+      { label: "BtoB P+R", vendorProgramId: "", pubToken: "" },
+      { label: "BtoB Rのみ", vendorProgramId: "", pubToken: "" },
+      { label: "BtoC Rのみ", vendorProgramId: "", pubToken: "" }
+    ];
+    const PRESET_KEY = "jolt_stg_test_presets_v2";
+
+    // ============================================================
+    // プログラム/トークン解決
+    // ============================================================
+    function getParams() {
+      const p = new URLSearchParams(location.search);
+      return {
+        program: (p.get("program") || "").trim(),
+        pubToken: (p.get("pubToken") || "").trim(),
+        preset: p.get("preset")
+      };
     }
 
-    function setProgramInUrl(programId) {
+    function loadPresets() {
+      try {
+        const raw = localStorage.getItem(PRESET_KEY);
+        if (!raw) return structuredClone(DEFAULT_PRESETS);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length !== 4) return structuredClone(DEFAULT_PRESETS);
+        return parsed.map((p, i) => ({
+          label: p.label || DEFAULT_PRESETS[i].label,
+          vendorProgramId: p.vendorProgramId || "",
+          pubToken: p.pubToken || ""
+        }));
+      } catch (e) {
+        return structuredClone(DEFAULT_PRESETS);
+      }
+    }
+
+    function persistPresets(presets) {
+      try {
+        localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
+      } catch (e) {}
+    }
+
+    function resolveCurrent() {
+      const params = getParams();
+      const presets = loadPresets();
+      // 優先順位: preset 指定 > program 指定 > デフォルト未指定
+      if (params.preset !== null && params.preset !== undefined) {
+        const idx = Number(params.preset);
+        if (Number.isInteger(idx) && idx >= 0 && idx < presets.length) {
+          const p = presets[idx];
+          return { vendorProgramId: p.vendorProgramId, pubToken: p.pubToken, presetIndex: idx, label: p.label };
+        }
+      }
+      if (params.program) {
+        // 手動指定だがpresetにマッチがあればラベルを補足
+        const matched = presets.findIndex(p => p.vendorProgramId === params.program);
+        return {
+          vendorProgramId: params.program,
+          pubToken: params.pubToken || (matched >= 0 ? presets[matched].pubToken : ""),
+          presetIndex: matched >= 0 ? matched : null,
+          label: matched >= 0 ? presets[matched].label : "（手動指定）"
+        };
+      }
+      return { vendorProgramId: "", pubToken: "", presetIndex: null, label: "" };
+    }
+
+    // ============================================================
+    // ナビゲーション
+    // ============================================================
+    function navigateToPreset(idx) {
       const url = new URL(location.href);
-      url.searchParams.set("program", programId);
+      url.searchParams.set("preset", String(idx));
+      url.searchParams.delete("program");
+      url.searchParams.delete("pubToken");
       location.href = url.toString();
     }
 
-    function applyProgram() {
-      const v = document.getElementById("program-input").value.trim();
-      if (!v) {
+    function applyManual() {
+      const program = document.getElementById("program-input").value.trim();
+      const pubToken = document.getElementById("pubtoken-input").value.trim();
+      if (!program) {
         alert("vendor_program_id を入力してください");
         return;
       }
-      setProgramInUrl(v);
+      const url = new URL(location.href);
+      url.searchParams.set("program", program);
+      if (pubToken) url.searchParams.set("pubToken", pubToken);
+      else url.searchParams.delete("pubToken");
+      url.searchParams.delete("preset");
+      location.href = url.toString();
     }
 
-    function clearWidgetAuth() {
-      const id = getProgramIdFromUrl();
-      if (!id) return;
-      try {
-        localStorage.removeItem("jolt_widget_token_" + id);
-        localStorage.removeItem("jolt_widget_hint_" + id);
-        sessionStorage.removeItem("jolt_widget_probe_" + id);
-      } catch (e) {
-        // SecurityError 等
+    function clearProgram() {
+      const url = new URL(location.href);
+      url.searchParams.delete("program");
+      url.searchParams.delete("pubToken");
+      url.searchParams.delete("preset");
+      location.href = url.toString();
+    }
+
+    // ============================================================
+    // プリセットUI
+    // ============================================================
+    function renderPresetEditor() {
+      const presets = loadPresets();
+      const tbody = document.getElementById("preset-tbody");
+      tbody.innerHTML = "";
+      presets.forEach((p, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input data-i="${i}" data-k="label" value="${escapeAttr(p.label)}"></td>
+          <td><input data-i="${i}" data-k="vendorProgramId" placeholder="01XXXXX..." value="${escapeAttr(p.vendorProgramId)}"></td>
+          <td><input data-i="${i}" data-k="pubToken" placeholder="pub_xxxx..." value="${escapeAttr(p.pubToken)}"></td>
+          <td><button class="secondary" onclick="navigateToPreset(${i})">切替</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function savePresets() {
+      const inputs = document.querySelectorAll("#preset-tbody input");
+      const presets = loadPresets();
+      inputs.forEach((el) => {
+        const i = Number(el.dataset.i);
+        const k = el.dataset.k;
+        presets[i][k] = el.value.trim();
+      });
+      persistPresets(presets);
+      alert("プリセットを保存しました。");
+      renderPresetEditor();
+      renderQuickSwitch();
+    }
+
+    function resetPresets() {
+      if (!confirm("プリセットを初期状態に戻しますか？")) return;
+      localStorage.removeItem(PRESET_KEY);
+      renderPresetEditor();
+      renderQuickSwitch();
+    }
+
+    function renderQuickSwitch() {
+      const presets = loadPresets();
+      const current = resolveCurrent();
+      const box = document.getElementById("preset-quick-switch");
+      box.innerHTML = "";
+      presets.forEach((p, i) => {
+        const btn = document.createElement("button");
+        const filled = p.vendorProgramId.length > 0;
+        const isActive = current.presetIndex === i;
+        btn.className = isActive ? "active" : "";
+        btn.textContent = filled ? p.label : `${p.label}（未設定）`;
+        btn.disabled = !filled;
+        btn.title = filled ? p.vendorProgramId : "プリセットを編集して保存してください";
+        btn.onclick = () => navigateToPreset(i);
+        box.appendChild(btn);
+      });
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+
+    // ============================================================
+    // 現在のステータス表示
+    // ============================================================
+    function renderCurrentStatus() {
+      const c = resolveCurrent();
+      const el = document.getElementById("current-status");
+      if (!c.vendorProgramId) {
+        el.className = "alert warn";
+        el.innerHTML = "プログラム未指定。上のプリセット切替かURL入力から選択してください。";
+        return;
       }
-      alert(
-        "localStorage / sessionStorage をクリアしました。\n" +
-        "ページをリロードすると認証チェックが再実行されます。\n" +
-        "Cookieが残っていれば認証済み状態で表示されます。"
-      );
+      el.className = "alert info";
+      el.innerHTML = `
+        <div>対象: <strong>${escapeAttr(c.label)}</strong></div>
+        <div>vendor_program_id: <code>${escapeAttr(c.vendorProgramId)}</code></div>
+        <div>public_token: ${c.pubToken ? `<code>${escapeAttr(c.pubToken.slice(0, 16))}…</code>` : `<span class="result-warn">未設定（タグ送信不可）</span>`}</div>
+      `;
     }
 
-    function resetProbeAndReload() {
-      const id = getProgramIdFromUrl();
-      if (!id) return;
-      try {
-        sessionStorage.removeItem("jolt_widget_probe_" + id);
-      } catch (e) {}
-      location.reload();
-    }
-
-    // ---------- ウィジェット注入 ----------
+    // ============================================================
+    // ウィジェット注入
+    // ============================================================
     function injectWidget(programId) {
-      // インライン領域の data 属性を設定
       const inlineHost = document.getElementById("inline-host");
       inlineHost.setAttribute("data-jolt-widget-inline", programId);
 
-      // ポップアップトリガーの data 属性を設定
       const popupTrigger = document.getElementById("popup-trigger");
       popupTrigger.setAttribute("data-jolt-widget-trigger", programId);
 
-      // 3モード分の script タグを動的注入
-      const modes = ["inline", "popup", "floating"];
-      modes.forEach(function (mode) {
+      ["inline", "popup", "floating"].forEach((mode) => {
         const s = document.createElement("script");
         s.async = true;
-        s.src = "https://tag.stg.jolt.me/widget/v1/widget.js";
+        s.src = STG_WIDGET_SRC;
         s.setAttribute("data-jolt-vendor-program-id", programId);
         s.setAttribute("data-jolt-mode", mode);
         document.body.appendChild(s);
       });
+
+      // フル表示ページのリンクを書き換え
+      const fullLink = document.getElementById("full-link");
+      const fullUrl = new URL("full.html", location.href);
+      fullUrl.searchParams.set("program", programId);
+      fullLink.href = fullUrl.toString();
     }
 
-    // ---------- 起動 ----------
-    (function init() {
-      const id = getProgramIdFromUrl();
-      const currentEl = document.getElementById("current-program");
-      const inputEl = document.getElementById("program-input");
-      const sectionsEl = document.getElementById("widget-sections");
+    // ============================================================
+    // タグ注入
+    // ============================================================
+    function injectTagScript(pubToken) {
+      // GA 風スタブ
+      window.Jolt = window.Jolt || function () {
+        (window.Jolt.q = window.Jolt.q || []).push(arguments);
+      };
+      window.Jolt("init", pubToken);
 
-      if (id) {
-        currentEl.innerHTML = "現在の対象プログラム: <code>" + id + "</code>";
-        inputEl.value = id;
-        sectionsEl.style.display = "block";
-        injectWidget(id);
-      } else {
-        currentEl.textContent = "未指定。上の入力欄に vendor_program_id を入れて「適用」を押してください。";
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = STG_TAG_SRC;
+      document.head.appendChild(s);
+    }
+
+    function ensureTagReady() {
+      const c = resolveCurrent();
+      if (!c.pubToken) {
+        document.getElementById("lead-disabled").style.display = "block";
+        return false;
       }
+      document.getElementById("lead-disabled").style.display = "none";
+      return true;
+    }
+
+    // ============================================================
+    // フォーム送信
+    // ============================================================
+    function sendUpdateLeadStatus(e) {
+      e.preventDefault();
+      const c = resolveCurrent();
+      const resultEl = document.getElementById("lead-result");
+      if (!c.pubToken) {
+        resultEl.innerHTML = `<span class="result-error">public_token が未設定です。Section 0 でプリセットを保存してください。</span>`;
+        return;
+      }
+      const payload = {
+        status: document.getElementById("lead-status").value,
+        email: document.getElementById("lead-email").value.trim(),
+        organization_id: document.getElementById("lead-org").value.trim(),
+        company_name: document.getElementById("lead-company").value.trim(),
+        last_name: document.getElementById("lead-lastname").value.trim(),
+        first_name: document.getElementById("lead-firstname").value.trim()
+      };
+      if (!payload.email && !payload.organization_id) {
+        resultEl.innerHTML = `<span class="result-error">email または organization_id のいずれかが必須です。</span>`;
+        return;
+      }
+      // 空フィールドは送らない（タグ側の validatePayload と整合）
+      Object.keys(payload).forEach((k) => {
+        if (payload[k] === "") delete payload[k];
+      });
+      try {
+        window.Jolt("updateLeadStatus", payload);
+        resultEl.innerHTML = `
+          <div class="result-success">送信しました（タグはレスポンスを返しません。Network タブで <code>/api/tracking/lead-status</code> を確認してください）。</div>
+          <pre>${escapeAttr(JSON.stringify(payload, null, 2))}</pre>
+        `;
+      } catch (err) {
+        resultEl.innerHTML = `<span class="result-error">送信時に例外: ${escapeAttr(String(err))}</span>`;
+      }
+    }
+
+    function sendTrack(e, type) {
+      e.preventDefault();
+      const c = resolveCurrent();
+      const resultEl = document.getElementById(`${type}-result`);
+      if (!c.vendorProgramId) {
+        resultEl.innerHTML = `<span class="result-error">vendor_program_id が未設定です。</span>`;
+        return;
+      }
+      const payload = { vendor_program_id: c.vendorProgramId };
+      payload.customer_contact_email = document.getElementById(`${type}-email`).value.trim();
+      if (type === "signup") {
+        const fields = ["name", "lastname", "firstname", "source", "sourceid"];
+        const apiKeys = {
+          name: "customer_name",
+          lastname: "customer_contact_last_name",
+          firstname: "customer_contact_first_name",
+          source: "external_source",
+          sourceid: "external_source_id"
+        };
+        fields.forEach((f) => {
+          const v = document.getElementById(`signup-${f}`).value.trim();
+          if (v) payload[apiKeys[f]] = v;
+        });
+      } else if (type === "purchase") {
+        const amount = document.getElementById("purchase-amount").value.trim();
+        if (amount) payload.amount = Number(amount);
+        const source = document.getElementById("purchase-source").value.trim();
+        const sourceId = document.getElementById("purchase-sourceid").value.trim();
+        if (source) payload.external_source = source;
+        if (sourceId) payload.external_source_id = sourceId;
+      } else if (type === "renewal") {
+        const amount = document.getElementById("renewal-amount").value.trim();
+        if (amount) payload.amount = Number(amount);
+        payload.external_source = document.getElementById("renewal-source").value.trim();
+        payload.external_source_id = document.getElementById("renewal-sourceid").value.trim();
+      }
+      // タグの validatePayload はキューにも積めるので、init 前でも遅延発火可
+      try {
+        window.Jolt = window.Jolt || function () { (window.Jolt.q = window.Jolt.q || []).push(arguments); };
+        window.Jolt("track", type, payload);
+        resultEl.innerHTML = `
+          <div class="result-success">送信しました（タグはレスポンスを返しません。Network タブで <code>/v1/tag/events/${type}</code> を確認してください）。</div>
+          <pre>${escapeAttr(JSON.stringify(payload, null, 2))}</pre>
+          <div class="muted">注意: バックエンドの Phase 2 機能が未実装の場合、404 / 405 が返ります（タグはサイレントに握り潰します）。</div>
+        `;
+      } catch (err) {
+        resultEl.innerHTML = `<span class="result-error">送信時に例外: ${escapeAttr(String(err))}</span>`;
+      }
+    }
+
+    // ============================================================
+    // ダミー値生成
+    // ============================================================
+    function nowSlug() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    }
+
+    function fillLeadDummy() {
+      const slug = nowSlug();
+      document.getElementById("lead-email").value = `lead+${slug}@example.com`;
+      document.getElementById("lead-org").value = `org_${slug}`;
+      document.getElementById("lead-company").value = "テスト株式会社";
+      document.getElementById("lead-lastname").value = "山田";
+      document.getElementById("lead-firstname").value = "太郎";
+    }
+
+    function fillTrackDummy(type) {
+      const slug = nowSlug();
+      document.getElementById(`${type}-email`).value = `customer+${slug}@example.com`;
+      if (type === "signup") {
+        document.getElementById("signup-name").value = "山田 太郎";
+        document.getElementById("signup-lastname").value = "山田";
+        document.getElementById("signup-firstname").value = "太郎";
+        document.getElementById("signup-source").value = "app_signup";
+        document.getElementById("signup-sourceid").value = `user_${slug}`;
+      } else if (type === "purchase") {
+        document.getElementById("purchase-amount").value = "5000";
+        document.getElementById("purchase-source").value = "stripe";
+        document.getElementById("purchase-sourceid").value = `pi_${slug}`;
+      } else if (type === "renewal") {
+        document.getElementById("renewal-amount").value = "500";
+        document.getElementById("renewal-source").value = "stripe";
+        document.getElementById("renewal-sourceid").value = `inv_${slug}`;
+      }
+    }
+
+    // ============================================================
+    // タブ切替
+    // ============================================================
+    function setupTrackTabs() {
+      const tabs = document.querySelectorAll("#track-tabs button");
+      tabs.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          tabs.forEach((b) => b.classList.toggle("active", b === btn));
+          const target = btn.dataset.tab;
+          document.querySelectorAll(".tab-panel").forEach((panel) => {
+            panel.classList.toggle("active", panel.dataset.panel === target);
+          });
+        });
+      });
+    }
+
+    // ============================================================
+    // 状態観察
+    // ============================================================
+    function renderState() {
+      const c = resolveCurrent();
+      const tbody = document.getElementById("state-tbody");
+      tbody.innerHTML = "";
+      const rows = [];
+      const id = c.vendorProgramId;
+      if (id) {
+        rows.push([`localStorage["jolt_widget_token_${id}"]`, safeGet("localStorage", `jolt_widget_token_${id}`)]);
+        rows.push([`localStorage["jolt_widget_hint_${id}"]`, safeGet("localStorage", `jolt_widget_hint_${id}`)]);
+        rows.push([`sessionStorage["jolt_widget_probe_${id}"]`, safeGet("sessionStorage", `jolt_widget_probe_${id}`)]);
+      }
+      rows.push(["document.cookie（このドメインのみ）", document.cookie || "(空)"]);
+      rows.push(["window.Jolt.v（タグ版本）", (window.Jolt && window.Jolt.v) || "(未ロード)"]);
+      rows.forEach(([k, v]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><code>${escapeAttr(k)}</code></td><td><code>${escapeAttr(v)}</code></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function safeGet(store, key) {
+      try {
+        return window[store].getItem(key) ?? "(null)";
+      } catch (e) {
+        return "(error)";
+      }
+    }
+
+    // ============================================================
+    // 認証クリアツール
+    // ============================================================
+    function clearWidgetAuth() {
+      const c = resolveCurrent();
+      if (!c.vendorProgramId) return;
+      try {
+        localStorage.removeItem(`jolt_widget_token_${c.vendorProgramId}`);
+        localStorage.removeItem(`jolt_widget_hint_${c.vendorProgramId}`);
+        sessionStorage.removeItem(`jolt_widget_probe_${c.vendorProgramId}`);
+      } catch (e) {}
+      alert("localStorage / sessionStorage をクリアしました。\nリロードすると認証チェックが再実行されます。\nHttpOnly Cookie が残っていれば認証済み状態で表示されます。");
+      renderState();
+    }
+
+    function resetProbeAndReload() {
+      const c = resolveCurrent();
+      if (!c.vendorProgramId) {
+        location.reload();
+        return;
+      }
+      try {
+        sessionStorage.removeItem(`jolt_widget_probe_${c.vendorProgramId}`);
+      } catch (e) {}
+      location.reload();
+    }
+
+    // ============================================================
+    // 初期化
+    // ============================================================
+    (function init() {
+      const c = resolveCurrent();
+      renderPresetEditor();
+      renderQuickSwitch();
+      renderCurrentStatus();
+
+      // フォームの初期値（vendor_program_id をtrackフォームに埋める）
+      if (c.vendorProgramId) {
+        ["signup", "purchase", "renewal"].forEach((t) => {
+          const el = document.getElementById(`${t}-program`);
+          if (el) el.value = c.vendorProgramId;
+        });
+        document.getElementById("program-required").style.display = "block";
+        document.getElementById("program-input").value = c.vendorProgramId;
+        document.getElementById("pubtoken-input").value = c.pubToken;
+        injectWidget(c.vendorProgramId);
+        if (c.pubToken) injectTagScript(c.pubToken);
+        ensureTagReady();
+        renderState();
+      }
+
+      setupTrackTabs();
     })();
   </script>
 </body>

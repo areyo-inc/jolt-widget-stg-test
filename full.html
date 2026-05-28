@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jolt Widget - フル表示形式</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: #f5f5f5;
+      color: #1f1f1f;
+    }
+    .header {
+      background: #fff;
+      padding: 12px 24px;
+      border-bottom: 1px solid #e3e3e3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header h1 { margin: 0; font-size: 16px; }
+    .header .muted { color: #6b6b6b; font-size: 12px; }
+    .header a {
+      color: #ff6b35;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .header a:hover { text-decoration: underline; }
+    .full-host {
+      min-height: calc(100vh - 60px);
+      padding: 24px;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+    .empty {
+      max-width: 600px;
+      margin: 80px auto;
+      padding: 32px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e3e3e3;
+    }
+    .empty h2 { margin-top: 0; }
+    code {
+      background: #f3f3f3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Jolt Widget - フル表示形式 <span class="muted">(Phase 2)</span></h1>
+      <div class="muted" id="program-info"></div>
+    </div>
+    <a id="back-link" href="index.html">← メインページに戻る</a>
+  </div>
+
+  <div id="root" class="full-host">
+    <!-- JSで描画 -->
+  </div>
+
+  <script>
+    const STG_WIDGET_SRC = "https://tag.stg.jolt.me/widget/v1/widget.js";
+
+    function getProgramId() {
+      const p = new URLSearchParams(location.search);
+      return (p.get("program") || "").trim();
+    }
+
+    function init() {
+      const programId = getProgramId();
+      const root = document.getElementById("root");
+      const infoEl = document.getElementById("program-info");
+      const backLink = document.getElementById("back-link");
+
+      // メインに戻るリンクは program パラメータを引き継ぐ
+      if (programId) {
+        const url = new URL("index.html", location.href);
+        url.searchParams.set("program", programId);
+        backLink.href = url.toString();
+      }
+
+      if (!programId) {
+        infoEl.textContent = "プログラム未指定";
+        root.innerHTML = `
+          <div class="empty">
+            <h2>プログラムが指定されていません</h2>
+            <p>URL に <code>?program=01XXXXX...</code> を付けてアクセスしてください。</p>
+            <p><a href="index.html">メインページに戻る</a></p>
+          </div>
+        `;
+        return;
+      }
+
+      infoEl.innerHTML = `vendor_program_id: <code>${escapeAttr(programId)}</code>`;
+
+      // data-jolt-widget-full をマウントターゲットに
+      const host = document.createElement("div");
+      host.setAttribute("data-jolt-widget-full", programId);
+      host.style.width = "100%";
+      root.appendChild(host);
+
+      // ウィジェットスクリプト注入（mode=full）
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = STG_WIDGET_SRC;
+      s.setAttribute("data-jolt-vendor-program-id", programId);
+      s.setAttribute("data-jolt-mode", "full");
+      document.body.appendChild(s);
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+
+    init();
+  </script>
+</body>
+</html>
