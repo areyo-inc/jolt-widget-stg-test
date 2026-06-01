@@ -14,7 +14,8 @@ Jolt リファラー機能の stg 環境動作確認用テストページ。
 | ウィジェット | フローティング・ポップアップ・インラインの3形式を同一ページに展開。フル表示形式は専用ページ |
 | リードフォーム | 紹介リンク経由のリード作成テスト（`lead-form/`）。URL fragment の cookie_value 経由で帰属し、`/api/tracking/submit` → `/api/tracking/cv` を発火 |
 | タグ: updateLeadStatus | BtoBリード自動作成タグ（既存）の送信フォーム。qualified / won |
-| タグ: track | Phase 2 カスタムイベント (signup / purchase / renewal) の送信フォーム |
+| タグ: track（カスタムイベント） | BtoC カスタムイベントタグ。**任意の `event_name`(slug) + amount** を指定して `Jolt('track', '<event_name>', { amount })` を送信 |
+| サーバーAPI: `/api/v1/events` | サーバー間呼び出し用カスタムイベントAPI。`X-Jolt-API-Key` 必須・ブラウザから簡易送信できるフォーム |
 | 状態観察 | localStorage / sessionStorage / document.cookie / タグ版本 の確認 |
 | テストツール | sessionStorage プローブのリセット / localStorage 全クリア |
 
@@ -78,9 +79,11 @@ https://areyo-inc.github.io/jolt-widget-stg-test/?preset=0   # 0..3 でプリセ
 7. 別ブラウザ側でリードを作成（以下のいずれか）:
    - Section 2 の「リードフォームを開く」→ 問い合わせフォームを送信（既存BtoBパイプライン）
    - Section 3 の updateLeadStatus タグを送信（BtoB既存タグ）
-   - Section 4 の track signup / purchase を送信（Phase 2）
+   - Section 4 の track（任意 event_name のカスタムイベント / BtoC）を送信
+   - Section 4b の POST /api/v1/events（サーバーAPI・API キー必須 / BtoC）を送信
 8. ベンダーダッシュボードの「紹介」一覧で referrer_id がセットされたリードが出ていることを確認
-9. リード → 適格 → 取引成立 を進めて報酬発火を確認
+9. BtoC: コンバージョンイベント実績タブで event_name ごとの実績が記録されていることを確認
+10. リード → 適格 → 取引成立 を進めて報酬発火を確認
 10. リファラーをブロックして、紹介リンクから新規リードが作れなくなることを確認
 ```
 
@@ -110,41 +113,52 @@ Jolt('updateLeadStatus', {
 
 エンドポイント: `POST https://external-api.stg.jolt.me/api/tracking/lead-status`
 
-### track signup / purchase（Phase 2）
+### track（カスタムイベント / BtoC）
+
+BtoC モード改訂で、固定3種（signup/purchase/renewal）は廃止され、**ベンダーがダッシュボードで定義したコンバージョンイベントの `event_name`(slug) を任意に指定**して発火する方式になりました。
 
 ```js
-Jolt('track', 'signup', {
+// 第2引数がベンダー定義の event_name (slug)。第3引数の payload に amount 等を載せる。
+Jolt('track', '<event_name>', {
   vendor_program_id: '01XXX...',
   customer_contact_email: 'customer@example.com',
-  customer_name: '山田 太郎',         // optional
-  external_source: 'app_signup',     // optional
-  external_source_id: 'user_12345'   // optional
-});
-
-Jolt('track', 'purchase', {
-  vendor_program_id: '01XXX...',
-  customer_contact_email: 'customer@example.com',
-  amount: 5000,                       // 円。%報酬時必須
-  external_source: 'stripe',
-  external_source_id: 'pi_xxxxxxx'
+  amount: 5000,                       // 任意（円。%報酬時必須）
+  customer_name: '山田 太郎',          // 任意
+  customer_contact_last_name: '山田',  // 任意
+  customer_contact_first_name: '太郎', // 任意
+  external_source: 'stripe',          // 任意（冪等性に利用）
+  external_source_id: 'pi_xxxxxxx'    // 任意（冪等性キー）
 });
 ```
 
-エンドポイント: `POST https://external-api.stg.jolt.me/v1/tag/events/{signup|purchase}`
+エンドポイント: `POST https://external-api.stg.jolt.me/v1/tag/events`（body に `event_name` を含む）
 
-帰属は `jolt_referral` Cookie 経由。Cookie がない場合は帰属不能として処理終了（タグはサイレント）。
+- `event_name` はベンダーダッシュボードの「コンバージョンイベント定義」で作成した slug と一致させる（未定義の slug はエラー）。
+- 帰属は `jolt_referral` Cookie 経由。Cookie がない場合は帰属不能として処理終了（タグはサイレント）。
 
-### track renewal（Phase 2 / 通常はサーバーサイド呼び出し）
+### サーバーAPI: `POST /api/v1/events`（BtoC / サーバー間呼び出し）
 
-```js
-Jolt('track', 'renewal', {
-  vendor_program_id: '01XXX...',
-  customer_contact_email: 'customer@example.com',
-  amount: 500,
-  external_source: 'stripe',          // 必須
-  external_source_id: 'inv_xxxxxxx'   // 必須（冪等性キー）
-});
+Stripe Webhook 等のサーバーサイドから呼び出すカスタムイベントAPI。Cookie を使わず `customer_contact_email` で既存紹介を解決する。**`X-Jolt-API-Key` ヘッダーが必須**で、`external_source` / `external_source_id` も必須（冪等性キー）。
+
+```bash
+curl -X POST https://external-api.stg.jolt.me/api/v1/events \
+  -H "Content-Type: application/json" \
+  -H "X-Jolt-API-Key: <stg-api-key>" \
+  -d '{
+    "vendor_program_id": "01XXX...",
+    "event_name": "renewal",
+    "customer_contact_email": "customer@example.com",
+    "amount": 500,
+    "external_source": "stripe",
+    "external_source_id": "inv_xxxxxxx"
+  }'
 ```
+
+ブラウザからの簡易確認は Section 4b のフォームでも可能（CORS で弾かれる場合は curl で検証）。
+
+### BtoC カスタムイベント実績の確認
+
+送信後、ベンダーダッシュボードの**コンバージョンイベント実績タブ**で、`event_name` ごとのイベント実績が記録されていることを確認できます。
 
 ---
 
@@ -164,11 +178,14 @@ Jolt('track', 'renewal', {
 ### タグの送信結果が見えない
 
 タグはレスポンスを返さない fire-and-forget 設計。
-DevTools → Network タブで `lead-status` / `tag/events/...` のリクエスト/レスポンスを確認してください。
+DevTools → Network タブで `lead-status` / `tag/events` のリクエスト/レスポンスを確認してください。
+（サーバーAPI Section 4b は fetch でレスポンスを画面表示します）
 
-### Phase 2 のタグが 404 を返す
+### カスタムイベントが記録されない
 
-`jolt-backend` の Phase 2 機能（`/v1/tag/events/...` エンドポイント）が未実装の場合に発生します。バックエンドの実装状況を確認してください。
+- `event_name`(slug) がベンダーダッシュボードの「コンバージョンイベント定義」と一致しているか確認（未定義 slug はエラー）。
+- ブラウザタグ（Section 4）は帰属 Cookie `jolt_referral` が無いと帰属不能で処理終了します。
+- サーバーAPI（Section 4b）は `X-Jolt-API-Key` が正しいか、`external_source` / `external_source_id` が入っているか確認してください。
 
 ---
 

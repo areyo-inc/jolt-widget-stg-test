@@ -354,127 +354,122 @@
     <!-- 4. タグ: track (カスタムイベント) -->
     <!-- ============================= -->
     <section>
-      <h2>4. タグ: track <span class="badge phase2">Phase 2</span></h2>
+      <h2>4. タグ: track（カスタムイベント） <span class="badge">BtoC</span></h2>
       <p class="muted">
-        BtoCモード用カスタムイベントタグ。<strong>サーバー側（jolt-backend）の Phase 2 機能が未実装の場合は 404 等のエラーが返ります</strong>（タグはエラーを握り潰すためコンソールに出ません）。
+        BtoCモード改訂対応。固定3種（signup/purchase/renewal）は廃止され、<strong>ベンダーがダッシュボードで定義したコンバージョンイベントの <code>event_name</code>(slug) を任意に指定</strong>して発火します。タグ呼び出しは <code>Jolt('track', '&lt;event_name&gt;', { amount })</code>。
       </p>
-      <p class="muted">エンドポイント: <code>POST {api-base}/v1/tag/events/{signup|purchase|renewal}</code></p>
+      <p class="muted">エンドポイント: <code>POST {api-base}/v1/tag/events</code>（body に <code>event_name</code> を含む）。帰属は <code>jolt_referral</code> Cookie 経由。</p>
 
-      <div class="tabs" id="track-tabs">
-        <button class="active" data-tab="signup">signup</button>
-        <button data-tab="purchase">purchase</button>
-        <button data-tab="renewal">renewal</button>
+      <div class="alert info">
+        <code>event_name</code> はベンダーダッシュボードの「コンバージョンイベント定義」で作成した slug と一致させてください。未定義の slug を送ると 404 / バリデーションエラーになります。
       </div>
 
-      <!-- signup -->
-      <div class="tab-panel active" data-panel="signup">
-        <p class="muted">サインアップ・登録完了ページに発火。リードを「適格」へ遷移させる。</p>
-        <form onsubmit="sendTrack(event, 'signup')">
-          <div class="form-grid">
-            <div>
-              <label>vendor_program_id *</label>
-              <input id="signup-program" type="text" readonly />
-            </div>
-            <div>
-              <label>customer_contact_email *</label>
-              <input id="signup-email" type="email" placeholder="customer@example.com" required />
-            </div>
-            <div>
-              <label>customer_name</label>
-              <input id="signup-name" type="text" placeholder="山田 太郎" />
-            </div>
-            <div>
-              <label>customer_contact_last_name</label>
-              <input id="signup-lastname" type="text" placeholder="山田" />
-            </div>
-            <div>
-              <label>customer_contact_first_name</label>
-              <input id="signup-firstname" type="text" placeholder="太郎" />
-            </div>
-            <div>
-              <label>external_source</label>
-              <input id="signup-source" type="text" placeholder="app_signup" />
-            </div>
-            <div class="full">
-              <label>external_source_id</label>
-              <input id="signup-sourceid" type="text" placeholder="user_12345" />
+      <form onsubmit="sendTrack(event)">
+        <div class="form-grid">
+          <div>
+            <label>vendor_program_id *</label>
+            <input id="track-program" type="text" readonly />
+          </div>
+          <div>
+            <label>event_name (slug) *</label>
+            <input id="track-event-name" type="text" placeholder="signup / purchase / my_custom_event" required />
+          </div>
+          <div class="full">
+            <label>よく使う例（クリックで入力）</label>
+            <div class="preset-buttons" id="track-event-presets">
+              <button type="button" onclick="setTrackEventName('signup')">signup</button>
+              <button type="button" onclick="setTrackEventName('purchase')">purchase</button>
+              <button type="button" onclick="setTrackEventName('renewal')">renewal</button>
             </div>
           </div>
-          <div class="row">
-            <button type="submit" class="primary">track signup を送信</button>
-            <button type="button" class="secondary" onclick="fillTrackDummy('signup')">テスト用ダミー値で埋める</button>
+          <div>
+            <label>customer_contact_email *</label>
+            <input id="track-email" type="email" placeholder="customer@example.com" required />
           </div>
-        </form>
-        <div id="signup-result" class="muted" style="margin-top: 12px;"></div>
+          <div>
+            <label>amount <span class="muted">(円・任意 / %報酬時必須)</span></label>
+            <input id="track-amount" type="number" placeholder="5000" />
+          </div>
+          <div>
+            <label>customer_name</label>
+            <input id="track-name" type="text" placeholder="山田 太郎" />
+          </div>
+          <div>
+            <label>customer_contact_last_name</label>
+            <input id="track-lastname" type="text" placeholder="山田" />
+          </div>
+          <div>
+            <label>customer_contact_first_name</label>
+            <input id="track-firstname" type="text" placeholder="太郎" />
+          </div>
+          <div>
+            <label>external_source <span class="muted">(任意・冪等性に利用)</span></label>
+            <input id="track-source" type="text" placeholder="stripe / app_signup" />
+          </div>
+          <div class="full">
+            <label>external_source_id <span class="muted">(任意・冪等性キー)</span></label>
+            <input id="track-sourceid" type="text" placeholder="pi_xxxxxxx / user_12345" />
+          </div>
+        </div>
+        <div class="row">
+          <button type="submit" class="primary">track を送信</button>
+          <button type="button" class="secondary" onclick="fillTrackDummy()">テスト用ダミー値で埋める</button>
+        </div>
+      </form>
+      <div id="track-result" class="muted" style="margin-top: 12px;"></div>
+    </section>
+
+    <!-- ============================= -->
+    <!-- 4b. サーバーAPI: POST /api/v1/events -->
+    <!-- ============================= -->
+    <section>
+      <h2>4b. サーバーAPI: <code>POST /api/v1/events</code> <span class="badge">BtoC / server</span></h2>
+      <p class="muted">
+        サーバー間呼び出し（Stripe Webhook 等）を想定したカスタムイベントAPI。Cookie を使わず <code>customer_contact_email</code> で既存紹介を解決します。<strong>API キー（<code>X-Jolt-API-Key</code>）が必須</strong>で、<code>external_source</code> / <code>external_source_id</code> も必須（冪等性キー）。
+      </p>
+      <p class="muted">エンドポイント: <code>POST {api-base}/api/v1/events</code></p>
+
+      <div class="alert warn">
+        ここで入力した API キーは送信時のみ HTTP ヘッダーに載せ、画面・localStorage には保存しません。stg 用キーのみ入力してください。
       </div>
 
-      <!-- purchase -->
-      <div class="tab-panel" data-panel="purchase">
-        <p class="muted">購入・コンバージョン完了ページに発火。リードを「取引成立」へ遷移させ、イベント2報酬を発火する。</p>
-        <form onsubmit="sendTrack(event, 'purchase')">
-          <div class="form-grid">
-            <div>
-              <label>vendor_program_id *</label>
-              <input id="purchase-program" type="text" readonly />
-            </div>
-            <div>
-              <label>customer_contact_email *</label>
-              <input id="purchase-email" type="email" placeholder="customer@example.com" required />
-            </div>
-            <div>
-              <label>amount <span class="muted">(円・%報酬時必須)</span></label>
-              <input id="purchase-amount" type="number" placeholder="5000" />
-            </div>
-            <div>
-              <label>external_source</label>
-              <input id="purchase-source" type="text" placeholder="stripe" />
-            </div>
-            <div class="full">
-              <label>external_source_id</label>
-              <input id="purchase-sourceid" type="text" placeholder="pi_xxxxxxx" />
-            </div>
+      <form onsubmit="sendServerEvent(event)">
+        <div class="form-grid">
+          <div class="full">
+            <label>X-Jolt-API-Key *</label>
+            <input id="server-apikey" type="text" placeholder="（ベンダーダッシュボードで発行した stg APIキー）" required autocomplete="off" />
           </div>
-          <div class="row">
-            <button type="submit" class="primary">track purchase を送信</button>
-            <button type="button" class="secondary" onclick="fillTrackDummy('purchase')">テスト用ダミー値で埋める</button>
+          <div>
+            <label>vendor_program_id *</label>
+            <input id="server-program" type="text" readonly />
           </div>
-        </form>
-        <div id="purchase-result" class="muted" style="margin-top: 12px;"></div>
-      </div>
-
-      <!-- renewal -->
-      <div class="tab-panel" data-panel="renewal">
-        <p class="muted">継続課金イベント。<strong>通常はサーバーサイドから呼び出すもの</strong>ですがテスト目的でブラウザから送れるようにしています。external_source / external_source_id が必須です（冪等性キー）。</p>
-        <form onsubmit="sendTrack(event, 'renewal')">
-          <div class="form-grid">
-            <div>
-              <label>vendor_program_id *</label>
-              <input id="renewal-program" type="text" readonly />
-            </div>
-            <div>
-              <label>customer_contact_email *</label>
-              <input id="renewal-email" type="email" placeholder="customer@example.com" required />
-            </div>
-            <div>
-              <label>amount</label>
-              <input id="renewal-amount" type="number" placeholder="500" />
-            </div>
-            <div>
-              <label>external_source *</label>
-              <input id="renewal-source" type="text" placeholder="stripe" required />
-            </div>
-            <div class="full">
-              <label>external_source_id *</label>
-              <input id="renewal-sourceid" type="text" placeholder="inv_xxxxxxx" required />
-            </div>
+          <div>
+            <label>event_name (slug) *</label>
+            <input id="server-event-name" type="text" placeholder="purchase / renewal / my_custom_event" required />
           </div>
-          <div class="row">
-            <button type="submit" class="primary">track renewal を送信</button>
-            <button type="button" class="secondary" onclick="fillTrackDummy('renewal')">テスト用ダミー値で埋める</button>
+          <div>
+            <label>customer_contact_email *</label>
+            <input id="server-email" type="email" placeholder="customer@example.com" required />
           </div>
-        </form>
-        <div id="renewal-result" class="muted" style="margin-top: 12px;"></div>
-      </div>
+          <div>
+            <label>amount <span class="muted">(円・任意)</span></label>
+            <input id="server-amount" type="number" placeholder="5000" />
+          </div>
+          <div>
+            <label>external_source *</label>
+            <input id="server-source" type="text" placeholder="stripe" required />
+          </div>
+          <div>
+            <label>external_source_id *</label>
+            <input id="server-sourceid" type="text" placeholder="inv_xxxxxxx" required />
+          </div>
+        </div>
+        <div class="row">
+          <button type="submit" class="primary">/api/v1/events を送信</button>
+          <button type="button" class="secondary" onclick="fillServerDummy()">テスト用ダミー値で埋める</button>
+        </div>
+      </form>
+      <div id="server-result" class="muted" style="margin-top: 12px;"></div>
     </section>
 
     <!-- ============================= -->
@@ -530,10 +525,12 @@
           <ul>
             <li>Section 2 の <strong>リードフォーム</strong> を開いて送信（既存BtoBパイプライン）</li>
             <li>Section 3 の <code>updateLeadStatus</code> タグ送信（BtoB既存タグ）</li>
-            <li>Section 4 の <code>track signup / purchase</code>（Phase 2）</li>
+            <li>Section 4 の <code>track</code>（任意 event_name のカスタムイベント / BtoC）</li>
+            <li>Section 4b の <code>POST /api/v1/events</code>（サーバーAPI・API キー必須 / BtoC）</li>
           </ul>
         </li>
         <li>ベンダーダッシュボードの「紹介」一覧で <strong>referrer_id がセットされたリード</strong> が出ていることを確認</li>
+        <li>BtoC: ダッシュボードの<strong>コンバージョンイベント実績タブ</strong>で、送信した <code>event_name</code> ごとのイベント実績が記録されていることを確認</li>
         <li>リード → 適格 → 取引成立 と進めて報酬が発火することを確認</li>
         <li>リファラーをブロックして、紹介リンクから新規リードが作れなくなることを確認</li>
       </ol>
@@ -819,53 +816,101 @@
       }
     }
 
-    function sendTrack(e, type) {
+    function setTrackEventName(name) {
+      document.getElementById("track-event-name").value = name;
+    }
+
+    function sendTrack(e) {
       e.preventDefault();
       const c = resolveCurrent();
-      const resultEl = document.getElementById(`${type}-result`);
+      const resultEl = document.getElementById("track-result");
       if (!c.vendorProgramId) {
         resultEl.innerHTML = `<span class="result-error">vendor_program_id が未設定です。</span>`;
         return;
       }
-      const payload = { vendor_program_id: c.vendorProgramId };
-      payload.customer_contact_email = document.getElementById(`${type}-email`).value.trim();
-      if (type === "signup") {
-        const fields = ["name", "lastname", "firstname", "source", "sourceid"];
-        const apiKeys = {
-          name: "customer_name",
-          lastname: "customer_contact_last_name",
-          firstname: "customer_contact_first_name",
-          source: "external_source",
-          sourceid: "external_source_id"
-        };
-        fields.forEach((f) => {
-          const v = document.getElementById(`signup-${f}`).value.trim();
-          if (v) payload[apiKeys[f]] = v;
-        });
-      } else if (type === "purchase") {
-        const amount = document.getElementById("purchase-amount").value.trim();
-        if (amount) payload.amount = Number(amount);
-        const source = document.getElementById("purchase-source").value.trim();
-        const sourceId = document.getElementById("purchase-sourceid").value.trim();
-        if (source) payload.external_source = source;
-        if (sourceId) payload.external_source_id = sourceId;
-      } else if (type === "renewal") {
-        const amount = document.getElementById("renewal-amount").value.trim();
-        if (amount) payload.amount = Number(amount);
-        payload.external_source = document.getElementById("renewal-source").value.trim();
-        payload.external_source_id = document.getElementById("renewal-sourceid").value.trim();
+      const eventName = document.getElementById("track-event-name").value.trim();
+      if (!eventName) {
+        resultEl.innerHTML = `<span class="result-error">event_name (slug) は必須です。</span>`;
+        return;
       }
-      // タグの validatePayload はキューにも積めるので、init 前でも遅延発火可
+      const payload = {
+        vendor_program_id: c.vendorProgramId,
+        event_name: eventName,
+        customer_contact_email: document.getElementById("track-email").value.trim()
+      };
+      const amount = document.getElementById("track-amount").value.trim();
+      if (amount) payload.amount = Number(amount);
+      const optional = {
+        "track-name": "customer_name",
+        "track-lastname": "customer_contact_last_name",
+        "track-firstname": "customer_contact_first_name",
+        "track-source": "external_source",
+        "track-sourceid": "external_source_id"
+      };
+      Object.entries(optional).forEach(([id, key]) => {
+        const v = document.getElementById(id).value.trim();
+        if (v) payload[key] = v;
+      });
+      // Jolt('track', '<event_name>', payload)。init 前でもキューに積まれる。
       try {
         window.Jolt = window.Jolt || function () { (window.Jolt.q = window.Jolt.q || []).push(arguments); };
-        window.Jolt("track", type, payload);
+        window.Jolt("track", eventName, payload);
         resultEl.innerHTML = `
-          <div class="result-success">送信しました（タグはレスポンスを返しません。Network タブで <code>/v1/tag/events/${type}</code> を確認してください）。</div>
-          <pre>${escapeAttr(JSON.stringify(payload, null, 2))}</pre>
-          <div class="muted">注意: バックエンドの Phase 2 機能が未実装の場合、404 / 405 が返ります（タグはサイレントに握り潰します）。</div>
+          <div class="result-success">送信しました（タグはレスポンスを返しません。Network タブで <code>/v1/tag/events</code> を確認してください）。</div>
+          <pre>${escapeAttr("Jolt('track', '" + eventName + "', " + JSON.stringify(payload, null, 2) + ")")}</pre>
+          <div class="muted">注意: <code>event_name</code> がベンダー定義の slug と一致しない場合や帰属 Cookie が無い場合はサーバー側で処理終了します（タグはサイレント）。</div>
         `;
       } catch (err) {
         resultEl.innerHTML = `<span class="result-error">送信時に例外: ${escapeAttr(String(err))}</span>`;
+      }
+    }
+
+    // サーバーAPI: POST /api/v1/events（X-Jolt-API-Key 必須・fetch で直接叩く）
+    async function sendServerEvent(e) {
+      e.preventDefault();
+      const c = resolveCurrent();
+      const resultEl = document.getElementById("server-result");
+      if (!c.vendorProgramId) {
+        resultEl.innerHTML = `<span class="result-error">vendor_program_id が未設定です。</span>`;
+        return;
+      }
+      const apiKey = document.getElementById("server-apikey").value.trim();
+      const eventName = document.getElementById("server-event-name").value.trim();
+      if (!apiKey || !eventName) {
+        resultEl.innerHTML = `<span class="result-error">API キーと event_name は必須です。</span>`;
+        return;
+      }
+      const amount = document.getElementById("server-amount").value.trim();
+      const payload = {
+        vendor_program_id: c.vendorProgramId,
+        event_name: eventName,
+        customer_contact_email: document.getElementById("server-email").value.trim(),
+        external_source: document.getElementById("server-source").value.trim(),
+        external_source_id: document.getElementById("server-sourceid").value.trim()
+      };
+      if (amount) payload.amount = Number(amount);
+      const url = `${STG_API_BASE}/api/v1/events`;
+      resultEl.innerHTML = `<span class="muted">送信中...</span>`;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jolt-API-Key": apiKey },
+          body: JSON.stringify(payload)
+        });
+        let bodyText = "";
+        try { bodyText = await res.text(); } catch (_) {}
+        const cls = res.ok ? "result-success" : "result-error";
+        resultEl.innerHTML = `
+          <div class="${cls}">HTTP ${res.status} ${escapeAttr(res.statusText)}</div>
+          <pre>POST ${escapeAttr(url)}\n${escapeAttr(JSON.stringify(payload, null, 2))}</pre>
+          <div class="muted">レスポンス:</div>
+          <pre>${escapeAttr(bodyText || "(空)")}</pre>
+        `;
+      } catch (err) {
+        resultEl.innerHTML = `
+          <span class="result-error">fetch 失敗: ${escapeAttr(String(err))}</span>
+          <div class="muted">CORS で弾かれている可能性があります（サーバーAPIはブラウザ用CORSを許可していない場合があります）。その場合は curl 等で検証してください。</div>
+        `;
       }
     }
 
@@ -887,40 +932,29 @@
       document.getElementById("lead-firstname").value = "太郎";
     }
 
-    function fillTrackDummy(type) {
+    function fillTrackDummy() {
       const slug = nowSlug();
-      document.getElementById(`${type}-email`).value = `customer+${slug}@example.com`;
-      if (type === "signup") {
-        document.getElementById("signup-name").value = "山田 太郎";
-        document.getElementById("signup-lastname").value = "山田";
-        document.getElementById("signup-firstname").value = "太郎";
-        document.getElementById("signup-source").value = "app_signup";
-        document.getElementById("signup-sourceid").value = `user_${slug}`;
-      } else if (type === "purchase") {
-        document.getElementById("purchase-amount").value = "5000";
-        document.getElementById("purchase-source").value = "stripe";
-        document.getElementById("purchase-sourceid").value = `pi_${slug}`;
-      } else if (type === "renewal") {
-        document.getElementById("renewal-amount").value = "500";
-        document.getElementById("renewal-source").value = "stripe";
-        document.getElementById("renewal-sourceid").value = `inv_${slug}`;
+      if (!document.getElementById("track-event-name").value.trim()) {
+        document.getElementById("track-event-name").value = "purchase";
       }
+      document.getElementById("track-email").value = `customer+${slug}@example.com`;
+      document.getElementById("track-amount").value = "5000";
+      document.getElementById("track-name").value = "山田 太郎";
+      document.getElementById("track-lastname").value = "山田";
+      document.getElementById("track-firstname").value = "太郎";
+      document.getElementById("track-source").value = "stripe";
+      document.getElementById("track-sourceid").value = `pi_${slug}`;
     }
 
-    // ============================================================
-    // タブ切替
-    // ============================================================
-    function setupTrackTabs() {
-      const tabs = document.querySelectorAll("#track-tabs button");
-      tabs.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          tabs.forEach((b) => b.classList.toggle("active", b === btn));
-          const target = btn.dataset.tab;
-          document.querySelectorAll(".tab-panel").forEach((panel) => {
-            panel.classList.toggle("active", panel.dataset.panel === target);
-          });
-        });
-      });
+    function fillServerDummy() {
+      const slug = nowSlug();
+      if (!document.getElementById("server-event-name").value.trim()) {
+        document.getElementById("server-event-name").value = "renewal";
+      }
+      document.getElementById("server-email").value = `customer+${slug}@example.com`;
+      document.getElementById("server-amount").value = "500";
+      document.getElementById("server-source").value = "stripe";
+      document.getElementById("server-sourceid").value = `inv_${slug}`;
     }
 
     // ============================================================
@@ -990,10 +1024,10 @@
       renderQuickSwitch();
       renderCurrentStatus();
 
-      // フォームの初期値（vendor_program_id をtrackフォームに埋める）
+      // フォームの初期値（vendor_program_id を track / server フォームに埋める）
       if (c.vendorProgramId) {
-        ["signup", "purchase", "renewal"].forEach((t) => {
-          const el = document.getElementById(`${t}-program`);
+        ["track-program", "server-program"].forEach((id) => {
+          const el = document.getElementById(id);
           if (el) el.value = c.vendorProgramId;
         });
         document.getElementById("program-required").style.display = "block";
@@ -1004,8 +1038,6 @@
         ensureTagReady();
         renderState();
       }
-
-      setupTrackTabs();
     })();
   </script>
 </body>
