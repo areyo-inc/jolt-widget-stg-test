@@ -19,6 +19,10 @@ Jolt リファラー機能の stg 環境動作確認用テストページ。
 | 状態観察 | localStorage / sessionStorage / document.cookie / タグ版本 の確認 |
 | テストツール | sessionStorage プローブのリセット / localStorage 全クリア |
 
+### 現状テスト対象外
+
+- **シームレスログイン（HMAC, Phase2 STEP5）**：バックエンド（`POST /v1/widget/referrers/seamless-login`）は実装済みだが、ウィジェット側の配線（スクリプトに署名付きメアドを渡して自動認証する処理）が未実装のため、現状このページからは動作確認できない。配線対応後にテストセクションを追加する。
+
 ---
 
 ## ファイル構成
