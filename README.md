@@ -16,12 +16,20 @@ Jolt リファラー機能の stg 環境動作確認用テストページ。
 | タグ: updateLeadStatus | BtoBリード自動作成タグ（既存）の送信フォーム。qualified / won |
 | タグ: track（カスタムイベント） | BtoC カスタムイベントタグ。**任意の `event_name`(slug) + amount** を指定して `Jolt('track', '<event_name>', { amount })` を送信 |
 | サーバーAPI: `/api/v1/events` | サーバー間呼び出し用カスタムイベントAPI。`X-Jolt-API-Key` 必須・ブラウザから簡易送信できるフォーム |
+| シームレスログイン（HMAC） | `seamless.html` で `window.jolt.referrer` に署名付きメアドを渡し、フォーム/マジックリンクをスキップして即認証する挙動を確認 |
 | 状態観察 | localStorage / sessionStorage / document.cookie / タグ版本 の確認 |
 | テストツール | sessionStorage プローブのリセット / localStorage 全クリア |
 
-### 現状テスト対象外
+### シームレスログイン（HMAC, Phase2 STEP5）
 
-- **シームレスログイン（HMAC, Phase2 STEP5）**：バックエンド（`POST /v1/widget/referrers/seamless-login`）は実装済みだが、ウィジェット側の配線（スクリプトに署名付きメアドを渡して自動認証する処理）が未実装のため、現状このページからは動作確認できない。配線対応後にテストセクションを追加する。
+ウィジェット側の配線が完了したため、`seamless.html` から動作確認できる（要 jolt-tag の該当ビルドが stg デプロイ済み）。署名付き URL の生成手順は `seamless.html` 内に記載。バックエンドは `POST /v1/widget/referrers/seamless-login`、検証順は シームレス → Cookie/localStorage → マジックリンク。
+
+### 未カバー / 今後追加したいシナリオ
+
+- **両面報酬**：リファラー＋紹介先双方への報酬（`REFERRER_TYPE_BOTH` / BtoC）の確認手順
+- **ブロック解除（Unblock）**：ブロック → 解除後に再びリード/CV を作れることの確認
+- **チャネル別クリック内訳**：共有ボタン（LINE/X/Facebook/QR）経由クリックの `_jc` チャネル別集計（リファラー詳細）
+- **手動コンバージョン作成**：ダッシュボード起点のオフライン手動 CV 登録
 
 ---
 
@@ -31,6 +39,7 @@ Jolt リファラー機能の stg 環境動作確認用テストページ。
 .
 ├── index.html         メインページ（プログラム選択・ウィジェット3形式・タグ送信・状態観察）
 ├── full.html          フル表示形式（Phase 2）専用ページ
+├── seamless.html      シームレスログイン（HMAC）専用ページ
 ├── lead-form/
 │   ├── index.html     紹介リンク経由のリード作成テスト用フォーム
 │   └── thanks.html    フォーム送信後のCV発火ページ
