@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jolt Widget - シームレスログイン (HMAC)</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      margin: 0; padding: 0; min-height: 100vh; background: #f5f5f5; color: #1f1f1f;
+    }
+    .header {
+      background: #fff; padding: 12px 24px; border-bottom: 1px solid #e3e3e3;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .header h1 { margin: 0; font-size: 16px; }
+    .header .muted { color: #6b6b6b; font-size: 12px; }
+    .header a { color: #ff6b35; text-decoration: none; font-size: 13px; }
+    .header a:hover { text-decoration: underline; }
+    .body { padding: 24px; max-width: 760px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #e3e3e3; border-radius: 10px; padding: 24px; margin-bottom: 16px; }
+    code, pre {
+      background: #f3f3f3; border-radius: 4px;
+      font-family: SFMono-Regular, Consolas, monospace; font-size: 0.9em;
+    }
+    code { padding: 2px 6px; }
+    pre { padding: 12px; overflow-x: auto; }
+    .ok { color: #1a7f37; }
+    .ng { color: #b3261e; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Jolt Widget - シームレスログイン <span class="muted">(Phase 2 STEP5 / HMAC)</span></h1>
+      <div class="muted" id="status"></div>
+    </div>
+    <a id="back-link" href="index.html">← メインページに戻る</a>
+  </div>
+
+  <div class="body">
+    <div class="card" id="instructions">
+      <h2>使い方</h2>
+      <p>ベンダーがバックエンドで生成した HMAC 署名を <code>window.jolt.referrer</code> に渡すと、フォーム入力・マジックリンク認証をスキップして即認証される挙動を確認するページです。</p>
+      <p>署名はプログラム単位のシークレット（管理画面「クリエイティブ &gt; ウィジェット &gt; シームレスログイン設定」で発行）を使って、以下の形式で計算します。</p>
+      <p><strong>メッセージ:</strong> <code>{email}|{customer_id}|{program_id}|{timestamp}</code> を HMAC-SHA256 → hex。timestamp は ±5 分以内（UNIX 秒）。</p>
+      <p>Node.js で署名 + テスト URL を生成する例:</p>
+      <pre>const crypto = require("crypto");
+const secret = process.env.JOLT_REFERRER_SECRET; // 管理画面で発行したプログラム単位シークレット
+const programId = "01XXXXXXXXXXXXXXXXXXXXXXXX";
+const email = "user@example.com";
+const customerId = "";                 // 任意（空文字でも可。署名計算には必ず含める）
+const timestamp = Math.floor(Date.now() / 1000);
+const message = `${email}|${customerId}|${programId}|${timestamp}`;
+const signature = crypto.createHmac("sha256", secret).update(message).digest("hex");
+const qs = new URLSearchParams({ program: programId, email, customer_id: customerId, timestamp: String(timestamp), signature });
+console.log(`seamless.html?${qs.toString()}`);</pre>
+      <p>出力された URL（このページのファイル名 + クエリ）を開くと、ウィジェットが認証済み状態で表示されます。</p>
+      <p class="muted">※ 署名は ±5 分で失効するため、生成したらすぐ開いてください。失効・不一致の場合はメアド入力フォーム（未認証）にフォールバックします。</p>
+      <p class="muted">※ このページが参照する widget.js は stg CDN（<code>https://tag.stg.jolt.me/widget/v1/widget.js</code>）です。シームレスログイン配線を含む jolt-tag のビルドが stg にデプロイ済みであることが前提です。</p>
+    </div>
+  </div>
+
+  <script>
+    const STG_WIDGET_SRC = "https://tag.stg.jolt.me/widget/v1/widget.js";
+
+    function init() {
+      const p = new URLSearchParams(location.search);
+      const programId = (p.get("program") || "").trim();
+      const email = (p.get("email") || "").trim();
+      const customerId = (p.get("customer_id") || "").trim();
+      const timestamp = parseInt(p.get("timestamp") || "0", 10);
+      const signature = (p.get("signature") || "").trim();
+      const statusEl = document.getElementById("status");
+      const backLink = document.getElementById("back-link");
+
+      if (programId) {
+        const url = new URL("index.html", location.href);
+        url.searchParams.set("program", programId);
+        backLink.href = url.toString();
+      }
+
+      if (!programId || !email || !signature || !timestamp) {
+        statusEl.innerHTML = '<span class="ng">パラメータ不足（下記手順で署名付き URL を生成してください）</span>';
+        return;
+      }
+
+      // ウィジェット init が読み取る前に window.jolt.referrer をセットする。
+      window.jolt = window.jolt || {};
+      window.jolt.referrer = {
+        email,
+        customer_id: customerId,
+        program_id: programId,
+        timestamp,
+        signature
+      };
+
+      statusEl.innerHTML = 'シームレスログインを試行中… <span class="muted">(成功すると実績タブが閲覧可能な認証済み状態になります)</span>';
+
+      // floating モードで即マウント → init で trySeamlessLogin が走る。
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = STG_WIDGET_SRC;
+      s.setAttribute("data-jolt-vendor-program-id", programId);
+      s.setAttribute("data-jolt-mode", "floating");
+      document.body.appendChild(s);
+    }
+
+    init();
+  </script>
+</body>
+</html>
