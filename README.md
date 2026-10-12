@@ -200,6 +200,19 @@ DevTools → Network タブで `lead-status` / `tag/events` のリクエスト/�
 - ブラウザタグ（Section 4）は帰属 Cookie `jolt_referral` が無いと帰属不能で処理終了します。
 - サーバーAPI（Section 4b）は `X-Jolt-API-Key` が正しいか、`external_source` / `external_source_id` が入っているか確認してください。
 
+## セットアップガイド（計測タグ）の確認用ページ `/guide/`
+
+BtoC のセットアップガイドのステップ3（計測タグを設置する）を確認するための、タグを直接貼った静的ページです。トップ・`/lead-form/` は他の検証でも使うので、そちらには貼っていません。
+
+| パス | 中身 |
+|---|---|
+| `/guide/` | 【P】カワハラ商事 友だち紹介（`01M4DDYGFC5K01SB6VZTBZRWFX`）の基本タグ（紹介リンク方式・HTML 版） |
+| `/guide/other/` | サイト内の別ページ（同じ基本タグ） |
+| `/guide/apply/` | 申込フォーム（メールアドレス・氏名・紹介コード）。送信後の動きを「完了ページに移る／同じページに表示／完了ページで送信」から選ぶ |
+| `/guide/apply/thanks/` | 完了ページ（何も送らない。フォームから自動取得の完了 URL 用） |
+| `/guide/apply/thanks-track/` | 完了ページ（入力したメールで `Jolt('track', 'first_purchase', …)` を送る） |
+| `/guide/p2/` | 【P2】カワハラ商事 法人紹介（`01M4FSSW6C9X8R5XWR8YWS3129`）の基本タグ（紹介コード方式・tag.js だけ） |
+
 ---
 
 ## 注意

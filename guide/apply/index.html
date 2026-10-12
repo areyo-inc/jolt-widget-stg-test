@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>お申し込み | カワハラ商事（Jolt stg ガイド確認用）</title>
+  <style>
+  body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#222;line-height:1.7}
+  nav a{margin-right:12px} .box{border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0}
+  label{display:block;margin-top:12px;font-weight:600} input[type=email],input[type=text]{width:100%;padding:8px;font-size:16px;box-sizing:border-box}
+  button{margin-top:16px;padding:10px 20px;font-size:16px} .muted{color:#666;font-size:13px} #done{display:none;color:#0a7a3a;font-weight:700}
+</style>
+<!-- Start Jolt Tag -->
+<script defer
+  data-env="stg"
+  src="https://track.stg.jolt.me/tag-tracking-pv.js"
+></script>
+<!-- End Jolt Tag -->
+<!-- Start Jolt Event Tag -->
+<script>
+  (function (w, d) {
+    w.Jolt =
+      w.Jolt ||
+      function () {
+        (w.Jolt.q = w.Jolt.q || []).push(arguments);
+      };
+    var s = d.createElement('script');
+    s.async = true;
+    s.src = 'https://tag.stg.jolt.me/v1/tag.js';
+    s.setAttribute('data-jolt-vendor-program-id', '01M4DDYGFC5K01SB6VZTBZRWFX');
+    d.head.appendChild(s);
+  })(window, document);
+</script>
+<!-- End Jolt Event Tag -->
+</head>
+<body>
+<nav><a href="/jolt-widget-stg-test/guide/">トップ</a><a href="/jolt-widget-stg-test/guide/other/">サービス紹介</a><a href="/jolt-widget-stg-test/guide/apply/">お申し込み</a></nav>
+<h1>お申し込み</h1>
+<form id="apply">
+  <label for="email">メールアドレス</label>
+  <input type="email" id="email" name="email" required placeholder="kazuma.kawahara+rc-guide@areyo.co.jp">
+  <label for="last_name">姓</label>
+  <input type="text" id="last_name" name="last_name" placeholder="川原">
+  <label for="first_name">名</label>
+  <input type="text" id="first_name" name="first_name" placeholder="和真">
+  <label for="referral_code">紹介コード（お持ちの方）</label>
+  <input type="text" id="referral_code" name="referral_code" placeholder="ABCD2345">
+  <div class="box">
+    <div><strong>送信後の動き</strong>（確認する手順に合わせて選ぶ）</div>
+    <label style="font-weight:400"><input type="radio" name="after" value="page" checked> 完了ページに移る（フォームから自動取得・完了ページに移る型）</label>
+    <label style="font-weight:400"><input type="radio" name="after" value="inline"> 同じページに完了の表示を出す（フォームから自動取得・同じページ型）</label>
+    <label style="font-weight:400"><input type="radio" name="after" value="track"> 完了ページで Jolt('track') を送る（完了ページで送信）</label>
+  </div>
+  <button type="submit">申し込む</button>
+  <p id="done">ありがとうございます。お申し込みを受け付けました。</p>
+</form>
+<script>
+  document.getElementById('apply').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target;
+    var after = f.querySelector('input[name=after]:checked').value;
+    sessionStorage.setItem('guide_apply', JSON.stringify({
+      email: f.email.value, last_name: f.last_name.value, first_name: f.first_name.value
+    }));
+    if (after === 'inline') {
+      document.getElementById('done').style.display = 'block';
+      return;
+    }
+    location.href = after === 'track' ? 'thanks-track/' : 'thanks/';
+  });
+</script>
+</body>
+</html>
