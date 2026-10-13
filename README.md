@@ -212,6 +212,8 @@ BtoC のセットアップガイドのステップ3（計測タグを設置す�
 | `/guide/apply/thanks/` | 完了ページ（何も送らない。フォームから自動取得の完了 URL 用） |
 | `/guide/apply/thanks-track/` | 完了ページ（入力したメールで `Jolt('track', 'first_purchase', …)` を送る） |
 | `/guide/p2/` | 【P2】カワハラ商事 法人紹介（`01M4FSSW6C9X8R5XWR8YWS3129`）の基本タグ（紹介コード方式・tag.js だけ） |
+| `/guide/p2/apply/` | 【P2】の申込フォーム（紹介コード欄 `id="referral_code"` あり）。送信後の動きは「完了ページに移る／同じページに表示」 |
+| `/guide/p2/apply/thanks/` | 【P2】の完了ページ（何も送らない。フォームから自動取得の完了 URL 用） |
 
 ---
 
